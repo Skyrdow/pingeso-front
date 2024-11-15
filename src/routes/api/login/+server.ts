@@ -1,6 +1,6 @@
-import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 
+import { json } from '@sveltejs/kit';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { JWT_SECRET } from '$env/static/private';
@@ -10,23 +10,29 @@ import { getDB } from '$lib';
 const TOKEN_SECRET = new TextEncoder().encode(JWT_SECRET);
 
 export const POST: RequestHandler = async ({ request, platform }) => {
-	const conn = getDB(platform);
-	if (conn.isErr()) return json({ error: conn.error }, { status: 400 });
+	const connResult = getDB(platform);
+	if (connResult.isErr()) return json({ error: connResult.error }, { status: 400 });
 
-	const db = conn.value;
+	const db = connResult.value;
 
 	const { email, password } = await request.json<{ email: string; password: string }>();
 
-	const user = await getUsuario(db, email);
+	const getResult = await getUsuario(db, email);
 
-	if (!user) return json({ error: 'Usuario no encontrado' }, { status: 404 });
+	if (getResult.isErr()) return json({ error: getResult.error }, { status: 404 });
+
+	const user = getResult.value;
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 	if (!isPasswordValid) {
 		return json({ error: 'Contraseña incorrecta' }, { status: 401 });
 	}
 
-	const token = await new SignJWT({ userId: user.id, email: user.email })
+	const token = await new SignJWT({
+		user_id: user.id_usuario,
+		is_admin: user.is_admin,
+		email: user.email
+	})
 		.setProtectedHeader({ alg: 'HS256' })
 		.setExpirationTime('1h')
 		.sign(TOKEN_SECRET);

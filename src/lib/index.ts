@@ -1,14 +1,24 @@
+import { JWT_SECRET } from '$env/static/private';
+import { jwtVerify } from 'jose';
 import { err, ok } from 'neverthrow';
 
-// place files you want to import through the `$lib` alias in this folder.
-export const init_db = [
-	'CREATE TABLE IF NOT EXISTS usuarios (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT, password TEXT);',
-	'INSERT INTO usuarios (email, password) VALUES ("HOLA2", "13278621783862187");',
-	'INSERT INTO usuarios (email, password) VALUES ("HOLA", "132411478621783862187");'
-];
+const TOKEN_SECRET = new TextEncoder().encode(JWT_SECRET);
 
 export const getDB = (platform: Readonly<App.Platform> | undefined) => {
 	if (!platform) return err('falló la conexión con la db');
 
 	return ok(platform.env.DB);
+};
+
+export const validateJWT = async (token: string) => {
+	try {
+		const { payload } = await jwtVerify<{ user_id: number; is_admin: number; email: string }>(
+			token.substring(7),
+			TOKEN_SECRET
+		);
+
+		return ok(payload);
+	} catch (error) {
+		return err(error);
+	}
 };
