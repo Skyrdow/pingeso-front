@@ -163,10 +163,10 @@ INSERT INTO Color (nombre_color) VALUES
 ('ROBLE DORADO'),
 ('NEGRO');
 
-INSERT INTO Material (nombre_material, texto_calidad, texto_termopanel) VALUES
-("ALUMINIO PREMIUM XELENTIA", "ALTA", "WARMEDGE"),
-("PVC EUROPEO", "ALTA", "WARMEDGE"),
-("ALUMINIO ESTÁNDAR BÁSICO", "ALTA", "WARMEDGE");
+INSERT INTO Material (nombre_material, texto_libre, texto_calidad, texto_termopanel) VALUES
+("ALUMINIO PREMIUM XELENTIA", "", "ALTA", "WARMEDGE"),
+("PVC EUROPEO", "", "ALTA", "WARMEDGE"),
+("ALUMINIO ESTÁNDAR BÁSICO", "", "ALTA", "WARMEDGE");
 
 INSERT INTO Tipo (descripcion_tipo, id_material, formula_ancho, formula_alto, cantidad_cristal, porcentaje_quinc, largo_perfil, minimo, maximo, ganancia) VALUES
 --ALUMINIO PREMIUM XELENTIA--
