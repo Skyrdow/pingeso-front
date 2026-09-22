@@ -1,47 +1,122 @@
 import { err, ok } from 'neverthrow';
+import { prisma } from '$lib';
+import type { PresupuestoModel } from '$lib/types';
+import { saveCliente } from './cliente';
 
-export const getPresupuestoById = async (db: D1Database, id: number) => {
-	const presupuesto = await db
-		.prepare('SELECT * FROM presupuesto WHERE id_presupuesto = ?;')
-		.bind(id)
-		.run<PresupuestoEntity>()
-		.then((stmt) => {
-			if (!stmt.results[0]) return err('Presupuesto no encontrado');
-			return ok(stmt.results[0]);
+export const getPresupuestoById = async (id: number) => {
+	return prisma.presupuesto
+		.findFirst({
+			include: { Cliente: true, Opciones: true, Usuario: true },
+			where: { id_presupuesto: { equals: id } }
+		})
+		.then((response) => ok(response))
+		.catch((error) => err(error));
+};
+
+export const getAllPresupuestos = async () => {
+	return prisma.presupuesto
+		.findMany({
+			include: {
+				Cliente: true,
+				Opciones: { include: { Ventanas: true } },
+				Usuario: { select: { email: true } }
+			}
+		})
+		.then((response) => ok(response))
+		.catch((error) => err(error));
+};
+
+export const savePresupuesto = async (presupuesto: PresupuestoModel, id_usuario: number) => {
+	await saveCliente(presupuesto.Cliente);
+	return prisma.presupuesto
+		.create({
+			include: { Cliente: true, Opciones: { include: { Ventanas: true } } },
+			data: {
+				valor_despacho: presupuesto.valor_despacho,
+				valor_instalacion: presupuesto.valor_instalacion,
+				texto_libre: presupuesto.texto_libre,
+				id_presupuesto: undefined,
+				fecha: new Date().toISOString(),
+				id_usuario: id_usuario,
+				rut_cliente: presupuesto.Cliente.rut_cliente,
+				nombre_cliente: presupuesto.nombre_cliente,
+				ganancia_global: presupuesto.ganancia_global,
+				estado: presupuesto.estado,
+				Opciones: {
+					create: presupuesto.Opciones.map((opcion) => {
+						return {
+							Ventanas: {
+								create: opcion.Ventanas.map((ventana) => {
+									return { ...ventana };
+								})
+							}
+						};
+					})
+				}
+			}
+		})
+		.then((response) => ok(response))
+		.catch((error) => err(error));
+};
+
+export const updatePresupuesto = async (id_presupuesto: number, presupuesto: PresupuestoModel) => {
+	try {
+		// Verificar si el presupuesto existe
+		const existingPresupuesto = await prisma.presupuesto.findUnique({
+			where: { id_presupuesto },
+			include: { Cliente: true, Opciones: { include: { Ventanas: true } } }
 		});
-	return presupuesto;
+
+		if (!existingPresupuesto) {
+			return err(`No se encontró el presupuesto con ID ${id_presupuesto}`);
+		}
+
+		// Actualizar el cliente asociado
+		await saveCliente(presupuesto.Cliente);
+
+		// Actualizar el presupuesto
+		const updatedPresupuesto = await prisma.presupuesto.update({
+			where: { id_presupuesto },
+			data: {
+				valor_despacho: presupuesto.valor_despacho,
+				valor_instalacion: presupuesto.valor_instalacion,
+				texto_libre: presupuesto.texto_libre,
+				fecha: new Date().toISOString(),
+				id_usuario: presupuesto.id_usuario,
+				rut_cliente: presupuesto.Cliente.rut_cliente,
+				nombre_cliente: presupuesto.nombre_cliente,
+				ganancia_global: presupuesto.ganancia_global,
+				estado: presupuesto.estado,
+
+				// Actualizar Opciones y Ventanas
+				Opciones: {
+					deleteMany: { id_opcion: { not: undefined } }, // Elimina todas las opciones previas
+					create: presupuesto.Opciones.map((opcion) => ({
+						Ventanas: {
+							create: opcion.Ventanas.map((ventana) => ({ ...ventana }))
+						}
+					}))
+				}
+			},
+			include: { Cliente: true, Opciones: { include: { Ventanas: true } } }
+		});
+
+		return ok(updatedPresupuesto);
+	} catch (error) {
+		return err(error);
+	}
 };
 
-export const getAllPresupuestos = async (db: D1Database) => {
-	const presupuestos = await db
-		.prepare('SELECT * FROM presupuesto;')
-		.run<PresupuestoEntity>()
-		.then((stmt) => stmt.results);
-	return presupuestos;
+export const deletePresupuesto = async (id: number) => {
+	return prisma.presupuesto
+		.delete({ where: { id_presupuesto: id } })
+		.then((response) => ok(response))
+		.catch((error) => err(error));
 };
 
-export const savePresupuesto = async (db: D1Database, presupuesto: PresupuestoEntity) => {
-	return await db
-		.prepare(
-			'INSERT INTO presupuesto (rut_usuario, fecha, data_json, nombre_cliente, rut_cliente) VALUES (?, ?, ?, ?, ?);'
-		)
-		.bind(
-			presupuesto.rut_usuario,
-			presupuesto.fecha,
-			presupuesto.data_json,
-			presupuesto.nombre_cliente,
-			presupuesto.rut_cliente
-		)
-		.run()
-		.then(() => ok(true))
-		.catch((error: Error) => err(error));
-};
-
-export const deletePresupuesto = async (db: D1Database, id: number) => {
-	return await db
-		.prepare('DELETE FROM presupuesto WHERE id_presupuesto = ?;')
-		.bind(id)
-		.run()
-		.then(() => ok(true))
-		.catch((error: Error) => err(error));
+export const editarEstado = async (id: number, estado: string) => {
+	return prisma.presupuesto
+		.update({ data: { estado }, where: { id_presupuesto: id } })
+		.then((response) => ok(response))
+		.catch((error) => err(error));
 };

@@ -1,0 +1,1494 @@
+<script lang="ts">
+	import { generatePDF } from '$lib/services/pdf_generator';
+	import type { ImageGroup, PresupuestoModel } from '$lib/types';
+	import type {
+		Color,
+		Constantes,
+		Cristal,
+		Imagen,
+		Material,
+		Perfil,
+		Quincalleria,
+		Tipo
+	} from '@prisma/client';
+	import type { PageData } from './$types';
+
+	interface Props {
+		data: PageData;
+	}
+
+	let { data }: Props = $props();
+
+	let constantSelected = $state('');
+	let constantes = [
+		'Materiales',
+		'Cristales',
+		'Tipos',
+		'Imágenes',
+		'Colores',
+		'Perfiles',
+		'Quincallerías'
+	];
+
+	let successModal = $state(false);
+	let errorMessage = $state('');
+	let editMaterialModal = $state(false);
+	let editTipoModal = $state(false);
+	let editCristalModal = $state(false);
+	let editPerfilModal = $state(false);
+	let addCristalModal = $state(false);
+	let editColorModal = $state(false);
+	let addColorModal = $state(false);
+	let editQuincalleriaModal = $state(false);
+
+	let materialSelected: Material = $state({
+		id_material: 0,
+		nombre_material: '',
+		texto_libre: '',
+		texto_calidad: '',
+		texto_termopanel: ''
+	});
+
+	let tipoSelected: Tipo = $state({
+		id_tipo: 0,
+		descripcion_tipo: '',
+		id_material: 0,
+		formula_ancho: '',
+		formula_alto: '',
+		cantidad_cristal: '',
+		porcentaje_quinc: 0,
+		largo_perfil: 0,
+		minimo: 0,
+		maximo: 0,
+		ganancia: 0
+	});
+
+	let cristalSelected: Cristal = $state({
+		id_cristal: 0,
+		desc_cristal: '',
+		precio_cristal: 0
+	});
+
+	let newCristal: Cristal = $state({
+		id_cristal: -1,
+		desc_cristal: '',
+		precio_cristal: 0
+	});
+
+	let colorSelected: Color = $state({
+		id_color: 0,
+		nombre_color: ''
+	});
+
+	let newColor: Color = $state({
+		id_color: -1,
+		nombre_color: ''
+	});
+
+	let perfilSelected: Perfil = $state({
+		id_perfil: -1,
+		codigo_per: -1,
+		formula_dim: '',
+		formula_cant: '',
+		kg_ml_per: -1,
+		valor: -1
+	});
+
+	let quincalleriaSelected: Quincalleria = $state({
+		id_quincalleria: -1,
+		desc_quin: '',
+		formula_quin: '',
+		precio_quin: -1
+	});
+
+	let materiales: Material[] = $state(data.materiales);
+	let tipos: Tipo[] = $state(data.tipos);
+	let cristales: Cristal[] = $state(data.cristales);
+	let colores: Color[] = $state(data.colores);
+	let imagenes: ImageGroup[] = $state(data.imagenes);
+	let imagenNueva: Imagen = $state({ bytes: '', id_imagen: 0, img_group: 1, height: 0 });
+	let perfiles: Perfil[] = $state(data.perfiles);
+	let quincallerias: Quincalleria[] = $state(data.quincallerias);
+	let constantes_pdf: Constantes = $state(data.constantes_pdf);
+
+	let textoIzq = $state(constantes_pdf.texto_izquierda);
+	let margenIzq = $state(constantes_pdf.margen_texto_izquierda ?? 0);
+	// svelte-ignore non_reactive_update
+	let textareaIzq: HTMLTextAreaElement;
+
+	let textoDer = $state(constantes_pdf.texto_derecha ?? '');
+	// svelte-ignore non_reactive_update
+	let textareaDer: HTMLTextAreaElement;
+	let margenDer = $state(constantes_pdf.margen_texto_derecha ?? 0);
+
+	let textoCliente = $state(constantes_pdf.texto_cliente ?? '');
+	// svelte-ignore non_reactive_update
+	let textareaCliente: HTMLTextAreaElement;
+
+	function formatoChileno(valor: number) {
+		return new Intl.NumberFormat('es-CL', {
+			style: 'currency',
+			currency: 'CLP',
+			minimumFractionDigits: 0
+		}).format(valor);
+	}
+
+	function openEditMaterialModal(material: Material) {
+		editMaterialModal = true;
+		materialSelected = material;
+	}
+
+	function closeEditMaterialModal() {
+		editMaterialModal = false;
+	}
+
+	function openEditTipoModal(tipo: Tipo) {
+		editTipoModal = true;
+		tipoSelected = tipo;
+	}
+
+	function closeEditTipoModal() {
+		editTipoModal = false;
+	}
+
+	function openEditCristalModal(cristal: Cristal) {
+		editCristalModal = true;
+		cristalSelected = cristal;
+	}
+
+	function closeEditCristalModal() {
+		editCristalModal = false;
+	}
+
+	function openAddCristalModal() {
+		addCristalModal = true;
+
+		newCristal = {
+			id_cristal: -1,
+			desc_cristal: '',
+			precio_cristal: 0
+		};
+		errorMessage = '';
+	}
+
+	function closeAddCristalModal() {
+		addCristalModal = false;
+		errorMessage = '';
+	}
+
+	function openEditColorModal(color: Color) {
+		editColorModal = true;
+		colorSelected = color;
+	}
+
+	function closeEditColorModal() {
+		editColorModal = false;
+	}
+
+	function openAddColorModal() {
+		addColorModal = true;
+
+		newColor = {
+			id_color: -1,
+			nombre_color: ''
+		};
+		errorMessage = '';
+	}
+
+	function closeAddColorModal() {
+		addColorModal = false;
+		errorMessage = '';
+	}
+
+	function cerrarSuccessModal() {
+		successModal = false;
+	}
+
+	function openEditPerfilModal(perfil: Perfil) {
+		editPerfilModal = true;
+		perfilSelected = perfil;
+	}
+
+	function closeEditPerfilModal() {
+		editPerfilModal = false;
+	}
+
+	function openEditQuincalleriaModal(quincalleria: Quincalleria) {
+		editQuincalleriaModal = true;
+		quincalleriaSelected = quincalleria;
+	}
+
+	function closeEditQuincalleriaModal() {
+		editQuincalleriaModal = false;
+	}
+
+	async function editMaterial() {
+		let bodyReq = {
+			id: materialSelected.id_material,
+			materialData: materialSelected
+		};
+
+		await fetch('/api/material', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(bodyReq)
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				editMaterialModal = false;
+				successModal = true;
+				console.log('Respuesta del servidor:', data);
+			})
+			.catch((error) => {
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function editTipo() {
+		let bodyReq = {
+			id: tipoSelected.id_tipo,
+			tipo: tipoSelected
+		};
+
+		fetch('/api/tipo', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(bodyReq)
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				editTipoModal = false;
+				successModal = true;
+				console.log('Respuesta del servidor:', data);
+			})
+			.catch((error) => {
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function editCristal() {
+		let bodyReq = {
+			id: cristalSelected.id_cristal,
+			cristalData: cristalSelected
+		};
+
+		fetch('/api/cristal', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(bodyReq)
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				editCristalModal = false;
+				successModal = true;
+				console.log('Respuesta del servidor:', data);
+			})
+			.catch((error) => {
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function addCristal() {
+		if (!newCristal.desc_cristal.trim()) {
+			errorMessage = 'La descripción del cristal es requerida';
+			return;
+		}
+
+		if (newCristal.precio_cristal <= 0) {
+			errorMessage = 'El precio debe ser mayor a 0';
+			return;
+		}
+
+		fetch('/api/cristal', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ cristalData: newCristal })
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				// Update the crystals list with the new data
+				cristales = [...cristales, data as Cristal];
+				addCristalModal = false;
+				successModal = true;
+				console.log('Cristal agregado:', data);
+			})
+			.catch((error) => {
+				errorMessage = 'Error al agregar el cristal. Por favor intente nuevamente.';
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function editColor() {
+		let bodyReq = {
+			id: colorSelected.id_color,
+			colorData: colorSelected
+		};
+
+		fetch('/api/color', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(bodyReq)
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				editColorModal = false;
+				successModal = true;
+				console.log('Respuesta del servidor:', data);
+			})
+			.catch((error) => {
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function addColor() {
+		if (!newColor.nombre_color.trim()) {
+			errorMessage = 'El nombre del color es requerido';
+			return;
+		}
+
+		fetch('/api/color', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({ colorData: newColor })
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				// Update the colors list with the new data
+				colores = [...colores, data as Color];
+				addColorModal = false;
+				successModal = true;
+				console.log('Color agregado:', data);
+			})
+			.catch((error) => {
+				errorMessage = 'Error al agregar el color. Por favor intente nuevamente.';
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function editPerfil() {
+		let bodyReq = {
+			id: perfilSelected.id_perfil,
+			perfilData: perfilSelected
+		};
+
+		fetch('/api/perfil', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(bodyReq)
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				editPerfilModal = false;
+				successModal = true;
+				console.log('Respuesta del servidor:', data);
+			})
+			.catch((error) => {
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	function editQuincalleria() {
+		let bodyReq = {
+			id: quincalleriaSelected.id_quincalleria,
+			quincalleriaData: quincalleriaSelected
+		};
+
+		fetch('/api/quincalleria', {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify(bodyReq)
+		})
+			.then((response) => {
+				if (!response.ok) {
+					throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+				}
+				return response.json();
+			})
+			.then(async (data) => {
+				editQuincalleriaModal = false;
+				successModal = true;
+				console.log('Respuesta del servidor:', data);
+			})
+			.catch((error) => {
+				console.error('Error durante la solicitud:', error);
+			});
+	}
+
+	const handleImageUpload = async (event: Event) => {
+		const files = (event.target as HTMLInputElement)?.files;
+		if (!files) return;
+
+		for (const file of Array.from(files)) {
+			if (!file.type.startsWith('image/')) continue; // Filtra solo imágenes
+
+			const reader = new FileReader();
+
+			reader.onload = async (e) => {
+				if (!e.target?.result) return;
+
+				const img = new Image();
+				img.src = e.target.result.toString();
+				img.onload = () => {
+					const canvas = document.createElement('canvas');
+					const ctx = canvas.getContext('2d');
+
+					if (!ctx) return;
+
+					// Define el tamaño del canvas según la imagen
+					canvas.width = img.width;
+					canvas.height = img.height;
+
+					// Dibuja la imagen en el canvas
+					ctx.drawImage(img, 0, 0);
+
+					// Si es JPG, conviértelo a PNG y guarda los bytes
+					if (file.type === 'image/jpeg') {
+						canvas.toBlob((blob) => {
+							if (blob) {
+								const readerBlob = new FileReader();
+								readerBlob.onloadend = () => {
+									if (readerBlob.result) {
+										imagenNueva.bytes = readerBlob.result.toString(); // Guarda los bytes convertidos
+									}
+								};
+								readerBlob.readAsDataURL(blob); // Lee los bytes del PNG
+							}
+						}, 'image/png');
+					} else {
+						// Si ya es PNG o cualquier otro formato, guarda los bytes originales
+						imagenNueva.bytes = e.target?.result?.toString() ?? '';
+					}
+				};
+			};
+
+			reader.readAsDataURL(file);
+		}
+	};
+
+	async function handleImagePost(img_group: number, height: number) {
+		if (imagenNueva.bytes === '') {
+			alert('Error al subir la imagen');
+			return;
+		}
+
+		imagenNueva.img_group = img_group;
+		// CAMBIAR POR INPUT
+		imagenNueva.height = height;
+		console.log(imagenNueva);
+
+		await fetch('/api/imagenes', {
+			method: 'POST',
+			body: JSON.stringify(imagenNueva)
+		}).then((response) => {
+			return response.json();
+		});
+		console.log(imagenNueva);
+		imagenNueva.bytes = '';
+		imagenes = await fetch('/api/imagenes', {
+			method: 'GET'
+		}).then((response) => {
+			return response.json();
+		});
+	}
+
+	async function handleImageDelete(idx: number, imgIdx: number) {
+		await fetch('/api/imagenes', {
+			method: 'DELETE',
+			body: JSON.stringify({ id_imagen: imagenes[idx].imagenes[imgIdx].id_imagen })
+		}).then((response) => {
+			return response.json();
+		});
+		imagenes = await fetch('/api/imagenes', {
+			method: 'GET'
+		}).then((response) => {
+			return response.json();
+		});
+	}
+
+	async function previewPDF() {
+		const previewPresupuesto: PresupuestoModel = {
+			Cliente: {
+				nombre: 'Cliente de prueba',
+				direccion: '',
+				email: '',
+				rut_cliente: '',
+				telefono: ''
+			},
+			estado: 'prueba',
+			fecha: new Date().toString(),
+			ganancia_global: 0,
+			id_usuario: 0,
+			nombre_cliente: 'Cliente de prueba',
+			Opciones: [
+				{
+					Ventanas: [
+						{
+							alto: 1000,
+							ancho: 1000,
+							cantidad: 1,
+							ganancia: 0,
+							id_color: 1,
+							id_cristal: 1,
+							id_material: 1,
+							id_tipo: 1,
+							item: '',
+							precio_total: 100000,
+							precio_unitario: 100000,
+							id_ventana: 0
+						}
+					],
+					id_opcion: 0
+				}
+			],
+			texto_libre: '',
+			valor_despacho: 10000,
+			valor_instalacion: 10000,
+			id_presupuesto: 0
+		};
+		const url = await generatePDF(previewPresupuesto, imagenes, data);
+		window.open(url);
+	}
+
+	async function handleTextoPDFSubmit() {
+		const newConstantes: Constantes = {
+			id_constantes: 0,
+			margen_texto_derecha: margenDer,
+			margen_texto_izquierda: margenIzq,
+			texto_cliente: textoCliente,
+			texto_derecha: textoDer,
+			texto_izquierda: textoIzq
+		};
+
+		const response = await fetch('/api/constantes', {
+			method: 'PUT',
+			body: JSON.stringify(newConstantes)
+		}).then((response) => {
+			return response.json();
+		});
+		location.reload();
+		console.log(response);
+	}
+
+	function adjustHeight(textarea: HTMLTextAreaElement) {
+		textarea.style.height = 'auto'; // Reiniciar altura para recalcular
+		textarea.style.height = textarea.scrollHeight + 'px'; // Ajustar a contenido
+	}
+</script>
+
+<div
+	class="min-h-screen w-full p-8 gap-5 flex flex-col bg-gray-100 2xl:w-[80%] xl:w-full lg:w-[50%] md:w-[70%] mx-auto overflow-scroll">
+	<div class="flex flex-row items-center">
+		<button
+			onclick={() => {
+				location.assign('/home');
+			}}
+			aria-label="home"
+			class="hover:underline">Home</button>
+		<div class="iconify mdi--keyboard-arrow-right size-5"></div>
+		<span class=" text-slate-400">Modificar</span>
+	</div>
+	<select
+		bind:value={constantSelected}
+		class="p-2 rounded-md bg-white border w-44 truncate overflow-hidden whitespace-nowrap">
+		<option selected disabled value="">Selecciona un tipo</option>
+		{#each constantes as option}
+			<option class="w-auto">{option}</option>
+		{/each}
+	</select>
+
+	{#if constantSelected == 'Materiales'}
+		<table class="table-auto w-full rounded-lg bg-white shadow">
+			<thead class="w-full bg-gray-200 text-gray-700">
+				<tr>
+					<th class="py-2 px-2 text-left">ID</th>
+					<th class="py-2 px-2 text-left">Nombre Material</th>
+					<th class="py-2 px-2 text-left">Texto libre PDF</th>
+					<th class="py-2 px-2 text-left">Texto 1</th>
+					<th class="py-2 px-2 text-left">Texto 2</th>
+				</tr>
+			</thead>
+			<tbody class="w-full">
+				{#each materiales as material}
+					<tr
+						onclick={() => {
+							openEditMaterialModal(material);
+						}}
+						class=" hover:bg-gray-100">
+						<td class="py-1 px-2 text-left">{material.id_material}</td>
+						<td class="py-1 px-2 text-left">{material.nombre_material}</td>
+						<td class="py-1 px-2 text-left">{material.texto_libre}</td>
+						<td class="py-1 px-2 text-left">{material.texto_calidad}</td>
+						<td class="py-1 px-2 text-left">{material.texto_termopanel}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+
+	<!--editMaterial Modal-->
+	{#if editMaterialModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
+				<!-- Botón de cierre -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeEditMaterialModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+				<p class="w-full text-xl text-center font-bold">Modificar Material</p>
+
+				<!-- Contenedor para la tabla con scroll horizontal -->
+				<div class="overflow-x-auto mt-4">
+					<table class="table-fixed w-full border-collapse border border-gray-300">
+						<thead class="bg-gray-200 text-gray-700 w-full">
+							<tr>
+								<th class="px-1 py-2 border w-16">ID</th>
+								<th class="border w-48">Nombre Material</th>
+								<th class="border w-32">Texto libre PDF</th>
+								<th class="border w-32">Texto 1</th>
+								<th class="border w-32">Texto 2</th>
+							</tr>
+						</thead>
+						<tbody class="w-full">
+							<tr>
+								<td class="border px-1 py-2">{materialSelected.id_material}</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={materialSelected.nombre_material}
+										placeholder="Nombre del material"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={materialSelected.texto_libre}
+										placeholder="Texto libre PDF"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={materialSelected.texto_calidad}
+										placeholder="Texto 1"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={materialSelected.texto_termopanel}
+										placeholder="Texto 2"
+										class="w-full" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<!-- Botón para guardar cambios -->
+				<button
+					onclick={editMaterial}
+					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
+					Guardar cambios
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	{#if constantSelected == 'Cristales'}
+		<table class="table-auto w-full rounded-lg bg-white shadow">
+			<thead class="w-full bg-gray-200 text-gray-700 text-left">
+				<tr>
+					<th class="py-2 px-2 text-left">ID</th>
+					<th class="py-2 px-2 text-left">Descripción Cristal</th>
+					<th class="py-2 px-2 text-left">Precio</th>
+				</tr>
+			</thead>
+			<tbody class="w-full">
+				{#each cristales as cristal}
+					<tr
+						onclick={() => {
+							openEditCristalModal(cristal);
+						}}
+						class=" hover:bg-gray-100">
+						<td class="py-1 px-2 text-left">{cristal.id_cristal}</td>
+						<td class="py-1 px-2 text-left">{cristal.desc_cristal}</td>
+						<td class="py-1 px-2 text-left">{formatoChileno(cristal.precio_cristal)}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+		<button
+			onclick={() => {
+				openAddCristalModal();
+			}}
+			class="w-full py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold">
+			Agregar Cristal</button>
+	{/if}
+
+	<!-- editCristal Modal -->
+	{#if editCristalModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
+				<!-- Close button -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeEditCristalModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold">Modificar Cristal</p>
+
+				<!-- Contenedor para la tabla con scroll horizontal -->
+				<div class="overflow-x-auto mt-4">
+					<table class="table-fixed w-full border-collapse border border-gray-300">
+						<thead class="bg-gray-200 text-gray-700 w-full">
+							<tr>
+								<th class="px-1 py-2 border w-16">ID</th>
+								<th class="border w-48">Descripción Cristal</th>
+								<th class="border w-32">Precio</th>
+							</tr>
+						</thead>
+						<tbody class="w-full">
+							<tr>
+								<td class="border px-1 py-2">{cristalSelected.id_cristal}</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={cristalSelected.desc_cristal}
+										placeholder="Descripción cristal"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={cristalSelected.precio_cristal}
+										placeholder="Precio"
+										class="w-full" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<!-- Botón para guardar cambios -->
+				<button
+					onclick={editCristal}
+					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
+					Guardar cambios
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- addCristal Modal -->
+	{#if addCristalModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[500px]">
+				<!-- Close button -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeAddCristalModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold mb-6">Agregar Nuevo Cristal</p>
+
+				<!-- Form container -->
+				<div class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<label for="desc_cristal" class="font-medium text-gray-700"
+							>Descripción del Cristal</label>
+						<input
+							type="text"
+							id="desc_cristal"
+							bind:value={newCristal.desc_cristal}
+							placeholder="Ingrese la descripción"
+							class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+					</div>
+
+					<div class="flex flex-col gap-2">
+						<label for="precio_cristal" class="font-medium text-gray-700">Precio</label>
+						<input
+							type="number"
+							id="precio_cristal"
+							bind:value={newCristal.precio_cristal}
+							placeholder="Ingrese el precio"
+							class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+					</div>
+
+					<!-- Error message -->
+					{#if errorMessage}
+						<p class="text-red-500 text-sm">{errorMessage}</p>
+					{/if}
+
+					<!-- Save button -->
+					<button
+						onclick={addCristal}
+						class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded-md hover:bg-teal-500 transition-colors mt-4">
+						Agregar Cristal
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if constantSelected == 'Tipos'}
+		<table class="table-auto w-full rounded-lg bg-white shadow">
+			<thead class="w-full bg-gray-200 text-gray-700">
+				<tr>
+					<th class="px-2 py-2 text-left">ID</th>
+					<th class="px-2 py-2 text-left">Descripción</th>
+					<th class="px-2 py-2 text-left">Material</th>
+					<th class="px-2 py-2 text-left">Ancho</th>
+					<th class="px-2 py-2 text-left">Alto</th>
+					<th class="px-2 py-2 text-left">Cantidad cristal</th>
+					<th class="px-2 py-2 text-left">% Quincallería</th>
+					<th class="px-2 py-2 text-left">Largo perfil</th>
+					<th class="px-2 py-2 text-left">Mínimo</th>
+					<th class="px-2 py-2 text-left">Máximo</th>
+					<th class="px-2 py-2 text-left">Ganancia</th>
+				</tr>
+			</thead>
+			<tbody class="w-full">
+				{#each tipos as tipo}
+					<tr
+						onclick={() => {
+							openEditTipoModal(tipo);
+						}}
+						class=" hover:bg-gray-100">
+						<td class="px-2 py-1">{tipo.id_tipo}</td>
+						<td class="px-2 py-1">{tipo.descripcion_tipo}</td>
+						<td class="px-2 py-1">{tipo.id_material}</td>
+						<td class="px-2 py-1">{tipo.formula_ancho}</td>
+						<td class="px-2 py-1">{tipo.formula_alto}</td>
+						<td class="px-2 py-1">{tipo.cantidad_cristal}</td>
+						<td class="px-2 py-1">{tipo.porcentaje_quinc}</td>
+						<td class="px-2 py-1">{tipo.largo_perfil}</td>
+						<td class="px-2 py-1">{tipo.minimo}</td>
+						<td class="px-2 py-1">{tipo.maximo}</td>
+						<td class="px-2 py-1">{tipo.ganancia}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+
+	<!-- editTipo Modal -->
+	{#if editTipoModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
+				<!-- Botón de cierre -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeEditTipoModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold">Modificar Tipo</p>
+
+				<!-- Contenedor para la tabla con scroll horizontal -->
+				<div class="overflow-x-auto mt-4">
+					<table class="table-fixed w-full border-collapse border border-gray-300">
+						<thead class="bg-gray-200 text-gray-700 w-full">
+							<tr>
+								<th class="px-1 py-2 border w-16">ID</th>
+								<th class="border w-32">Descripción</th>
+								<th class="border w-32">Material</th>
+								<th class="border w-32">Ancho</th>
+								<th class="border w-32">Alto</th>
+								<th class="border min-w-28 w-28">Cant. cristal</th>
+								<th class="border w-20">% Quincallería</th>
+								<th class="border w-24">Largo perfil</th>
+								<th class="border w-32">Mínimo</th>
+								<th class="border w-32">Máximo</th>
+								<th class="border w-32">Ganancia</th>
+							</tr>
+						</thead>
+						<tbody class="w-full">
+							<tr>
+								<td class="border px-1 py-2">{tipoSelected.id_tipo}</td>
+								<td class="border line-clamp-0">{tipoSelected.descripcion_tipo}</td>
+								<td class="border">{tipoSelected.id_material}</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={tipoSelected.formula_ancho}
+										placeholder="Fórmula ancho"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={tipoSelected.formula_alto}
+										placeholder="Fórmula alto"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={tipoSelected.cantidad_cristal}
+										placeholder="Cantidad cristal"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={tipoSelected.porcentaje_quinc}
+										placeholder="% Quincallería"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={tipoSelected.largo_perfil}
+										placeholder="Largo perfil"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={tipoSelected.minimo}
+										placeholder="Mínimo"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={tipoSelected.maximo}
+										placeholder="Máximo"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={tipoSelected.ganancia}
+										placeholder="Ganancia"
+										class="w-full" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Botón para guardar cambios -->
+				<button
+					onclick={editTipo}
+					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
+					Guardar cambios
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	{#if successModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="bg-white rounded-lg shadow-xl w-96 p-8">
+				<!-- Botón de cierre -->
+				<div class="flex justify-end">
+					<button
+						onclick={cerrarSuccessModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<div class="w-full iconify mdi--success-circle bg-teal-500 size-16"></div>
+
+				<!-- Contenido del modal -->
+				<div class="flex flex-col gap-2 text-center mt-2 items-center">
+					<h2 class="text-2xl font-extrabold text-gray-800">¡Éxito!</h2>
+					<p class="text-gray-700">Modificación realizada correctamente</p>
+
+					<!-- Botón para realizar otra acción o cerrar -->
+					<button
+						onclick={cerrarSuccessModal}
+						class="bg-transparent text-gray-700 mt-2 w-fit font-medium py-2 px-4 rounded hover:underline">
+						Cerrar
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if constantSelected == 'Colores'}
+		<table class="table-auto w-full rounded-lg bg-white shadow">
+			<thead class="w-full bg-gray-200 text-gray-700">
+				<tr>
+					<th class="py-2 px-2 text-left">ID</th>
+					<th class="py-2 px-2 text-left">Nombre Color</th>
+				</tr>
+			</thead>
+			<tbody class="w-full">
+				{#each colores as color}
+					<tr
+						onclick={() => {
+							openEditColorModal(color);
+						}}
+						class=" hover:bg-gray-100">
+						<td class="py-1 px-2 text-left">{color.id_color}</td>
+						<td class="py-1 px-2 text-left">{color.nombre_color}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+		<button
+			onclick={() => {
+				openAddColorModal();
+			}}
+			aria-label="Agregar Color"
+			class="w-full bg-teal-600 hover:bg-teal-500 transition-all text-white rounded-lg font-bold">
+			Agregar Color</button>
+	{/if}
+
+	<!-- editColor Modal -->
+	{#if editColorModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
+				<!-- Close button -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeEditColorModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold">Modificar Color</p>
+
+				<!-- Table container with horizontal scroll -->
+				<div class="overflow-x-auto mt-4">
+					<table class="table-fixed w-full border-collapse border border-gray-300">
+						<thead class="bg-gray-200 text-gray-700 w-full">
+							<tr>
+								<th class="px-1 py-2 border w-16">ID</th>
+								<th class="border w-48">Nombre Color</th>
+							</tr>
+						</thead>
+						<tbody class="w-full">
+							<tr>
+								<td class="border px-1 py-2">{colorSelected.id_color}</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={colorSelected.nombre_color}
+										placeholder="Nombre del color"
+										class="w-full" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Save changes button -->
+				<button
+					onclick={editColor}
+					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
+					Guardar cambios
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- addColor Modal -->
+	{#if addColorModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[500px]">
+				<!-- Close button -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeAddColorModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold mb-6">Agregar Nuevo Color</p>
+
+				<!-- Form container -->
+				<div class="flex flex-col gap-4">
+					<div class="flex flex-col gap-2">
+						<label for="desc_cristal" class="font-medium text-gray-700">Nombre del color</label>
+						<input
+							type="text"
+							id="desc_cristal"
+							bind:value={newColor.nombre_color}
+							placeholder="Ingrese el nombre"
+							class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" />
+					</div>
+
+					<!-- Error message -->
+					{#if errorMessage}
+						<p class="text-red-500 text-sm">{errorMessage}</p>
+					{/if}
+
+					<!-- Save button -->
+					<button
+						onclick={addColor}
+						class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded-md hover:bg-teal-500 transition-colors mt-4">
+						Agregar Color
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	{#if constantSelected == 'Imágenes'}
+		<div class="space-y-8">
+			<button class="bg-white p-4 shadow-md" onclick={previewPDF}>Previsualizar PDF</button>
+			<div class="w-full flex flex-col">
+				<h2>
+					{'Palabras especiales: {nombre} - Nombre del cliente {numero} - Número de presupuesto'}
+				</h2>
+				<label>
+					Texto Izquierdo
+					<textarea
+						class="w-full resize-none"
+						bind:value={textoIzq}
+						oninput={() => adjustHeight(textareaIzq)}
+						onfocus={() => adjustHeight(textareaIzq)}
+						bind:this={textareaIzq}></textarea>
+				</label>
+				<label>
+					Margen Texto Izquierdo
+					<input type="number" bind:value={margenIzq} />
+				</label>
+				<label
+					>Texto Derecha
+					<textarea
+						class="w-full resize-none"
+						bind:value={textoDer}
+						oninput={() => adjustHeight(textareaDer)}
+						onfocus={() => adjustHeight(textareaDer)}
+						bind:this={textareaDer}></textarea>
+				</label>
+				<label
+					>Margen Texto Derecha
+					<input type="number" bind:value={margenDer} />
+				</label>
+				<label
+					>Texto Cliente
+					<textarea
+						class="w-full resize-none"
+						oninput={() => adjustHeight(textareaCliente)}
+						onfocus={() => adjustHeight(textareaCliente)}
+						bind:this={textareaCliente}
+						bind:value={textoCliente}></textarea>
+				</label>
+
+				<button onclick={handleTextoPDFSubmit}>Guardar cambios</button>
+			</div>
+
+			{#each imagenes as grupo, idx}
+				<div class="bg-white rounded-lg shadow-md p-6">
+					<div class="flex items-center justify-between mb-4">
+						<h2 class="text-xl font-semibold text-gray-800">Imágenes cabezal {idx + 1}</h2>
+					</div>
+
+					<!-- Grid de imágenes -->
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+						{#each grupo.imagenes as img, imgIdx}
+							<div class="relative group">
+								<div class="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
+									<img
+										src={img.bytes}
+										alt={`Imagen cabezal ${idx + 1}-${imgIdx}`}
+										class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+								</div>
+								<button
+									aria-label="eliminar imagen"
+									onclick={() => handleImageDelete(idx, imgIdx)}
+									class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+									<div class="iconify mdi--delete size-5"></div>
+								</button>
+							</div>
+						{/each}
+					</div>
+
+					<!-- Sección para agregar nueva imagen -->
+					<div class="border border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
+						<div class="flex flex-col items-center gap-4">
+							<div class="iconify mdi--cloud-upload text-gray-400 size-12"></div>
+							<h3 class="text-lg font-medium text-gray-700">Agregar imagen nueva</h3>
+							<p class="text-sm text-gray-500 text-center">
+								Arrastra y suelta una imagen aquí o haz clic para seleccionar
+							</p>
+							<input
+								type="file"
+								accept="image/*"
+								onchange={async (e) => {
+									await handleImageUpload(e);
+									setTimeout(async () => {
+										await handleImagePost(idx + 1, 80);
+									}, 1000);
+								}}
+								class="block w-full text-sm text-gray-500
+						file:mr-4 file:py-2 file:px-4
+						file:rounded-full file:border-0
+						file:text-sm file:font-semibold
+						file:bg-teal-50 file:text-teal-700
+						hover:file:bg-teal-100
+						cursor-pointer
+					" />
+						</div>
+					</div>
+				</div>
+			{/each}
+		</div>
+	{/if}
+
+	<!--Tabla perfiles-->
+	{#if constantSelected == 'Perfiles'}
+		<table class="table-auto w-full rounded-lg bg-white shadow">
+			<thead class="w-full bg-gray-200 text-gray-700">
+				<tr>
+					<th class="py-2 px-2 text-left">ID</th>
+					<th class="py-2 px-2 text-left">Código Perfil</th>
+					<th class="py-2 px-2 text-left">Dimensión</th>
+					<th class="py-2 px-2 text-left">Cantidad</th>
+					<th class="py-2 px-2 text-left">Kg/ml</th>
+					<th class="py-2 px-2 text-left">Precio</th>
+				</tr>
+			</thead>
+			<tbody class="w-full">
+				{#each perfiles as perfil}
+					<tr
+						onclick={() => {
+							openEditPerfilModal(perfil);
+						}}
+						class=" hover:bg-gray-100">
+						<td class="py-1 px-2 text-left">{perfil.id_perfil}</td>
+						<td class="py-1 px-2 text-left">{perfil.codigo_per}</td>
+						<td class="py-1 px-2 text-left">{perfil.formula_dim}</td>
+						<td class="py-1 px-2 text-left">{perfil.formula_cant}</td>
+						<td class="py-1 px-2 text-left">{perfil.kg_ml_per}</td>
+						<td class="py-1 px-2 text-left">{formatoChileno(perfil.valor)}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+
+	<!-- editPerfil Modal -->
+	{#if editPerfilModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
+				<!-- Close button -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeEditPerfilModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold">Modificar Perfil</p>
+
+				<!-- Table container with horizontal scroll -->
+				<div class="overflow-x-auto mt-4">
+					<table class="table-fixed w-full border-collapse border border-gray-300">
+						<thead class="bg-gray-200 text-gray-700 w-full">
+							<tr>
+								<th class="px-1 py-2 border w-16">ID</th>
+								<th class="border w-48">Código Perfil</th>
+								<th class="border w-48">Dimensiones</th>
+								<th class="border w-48">Cantidad</th>
+								<th class="border w-48">Kg/ml</th>
+								<th class="border w-48">Precio</th>
+							</tr>
+						</thead>
+						<tbody class="w-full">
+							<tr>
+								<td class="border px-1 py-2">{perfilSelected.id_perfil}</td>
+								<td class="border px-1 py-2">{perfilSelected.codigo_per}</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={perfilSelected.formula_dim}
+										placeholder="Dimesiones"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={perfilSelected.formula_cant}
+										placeholder="Cantidad"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={perfilSelected.kg_ml_per}
+										placeholder="Kg/ml"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={perfilSelected.valor}
+										placeholder="Precio"
+										class="w-full" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Save changes button -->
+				<button
+					onclick={editPerfil}
+					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
+					Guardar cambios
+				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!--Tabla quincallerias-->
+	{#if constantSelected == 'Quincallerías'}
+		<table class="table-auto w-full rounded-lg bg-white shadow">
+			<thead class="w-full bg-gray-200 text-gray-700">
+				<tr>
+					<th class="py-3 px-4 text-left">ID</th>
+					<th class="py-3 px-4 text-left">Descripción</th>
+					<th class="py-3 px-4 text-left">Fórmula</th>
+					<th class="py-3 px-4 text-left">Precio</th>
+				</tr>
+			</thead>
+			<tbody class="w-full">
+				{#each quincallerias as quincalleria}
+					<tr
+						onclick={() => {
+							openEditQuincalleriaModal(quincalleria);
+						}}
+						class=" hover:bg-gray-100">
+						<td class="py-2 px-4 text-left">{quincalleria.id_quincalleria}</td>
+						<td class="py-2 px-4 text-left">{quincalleria.desc_quin}</td>
+						<td class="py-2 px-4 text-left">{quincalleria.formula_quin}</td>
+						<td class="py-2 px-4 text-left">{formatoChileno(quincalleria.precio_quin)}</td>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	{/if}
+	{#if editQuincalleriaModal}
+		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
+			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
+				<!-- Close button -->
+				<div class="flex justify-end">
+					<button
+						onclick={closeEditQuincalleriaModal}
+						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
+						aria-label="X">
+					</button>
+				</div>
+
+				<p class="w-full text-xl text-center font-bold">Modificar Quincallería</p>
+
+				<!-- Table container with horizontal scroll -->
+				<div class="overflow-x-auto mt-4">
+					<table class="table-fixed w-full border-collapse border border-gray-300">
+						<thead class="bg-gray-200 text-gray-700 w-full">
+							<tr>
+								<th class="px-1 py-2 border w-16">ID</th>
+								<th class="border w-48">Descripción</th>
+								<th class="border w-48">Fórmula</th>
+								<th class="border w-48">Precio</th>
+							</tr>
+						</thead>
+						<tbody class="w-full">
+							<tr>
+								<td class="border px-1 py-2">{quincalleriaSelected.id_quincalleria}</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={quincalleriaSelected.desc_quin}
+										placeholder="Descripción"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="text"
+										bind:value={quincalleriaSelected.formula_quin}
+										placeholder="Fórmula"
+										class="w-full" />
+								</td>
+								<td class="border">
+									<input
+										type="number"
+										bind:value={quincalleriaSelected.precio_quin}
+										placeholder="Precio"
+										class="w-full" />
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+
+				<!-- Save changes button -->
+				<button
+					onclick={editQuincalleria}
+					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
+					Guardar cambios
+				</button>
+			</div>
+		</div>
+	{/if}
+</div>

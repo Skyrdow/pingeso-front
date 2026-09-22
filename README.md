@@ -6,10 +6,6 @@ OJO: las db que se usen en el entorno de desarrollo local también son locales, 
 
 ### Archivos de entorno
 
-#### .env
-
-- `PUBLIC_IS_DEV=TRUE` hará que, al ejecutar el proyecto localmente, se creen las tablas y se inserten datos de prueba
-
 #### wrangler.toml
 
 Este es el archivo de configuración para cloudflare, todos los valores se sacan de la dashboard. [(docs)](https://developers.cloudflare.com/pages/functions/bindings/#d1-databases)
@@ -27,6 +23,20 @@ Este es el archivo de configuración para cloudflare, todos los valores se sacan
 ```bash
 npm i
 ```
+
+#### Prisma
+
+Generar el cliente y tipos de la db
+Generar el script sql que crea las tablas (necesario en caso de realizar cambios a schema.prisma)
+Aplicar el script de migración que crea las tablas en la db, en --remote o --local
+
+```bash
+npx prisma generate
+npx prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma --script --output migrations/0001_create_tables.sql
+npx wrangler d1 migrations apply termoacusticos-db --local
+```
+
+Más info en los [docs](https://www.prisma.io/docs/orm/prisma-client/deployment/edge/deploy-to-cloudflare#cloudflare-d1)
 
 #### Ejecutar entorno de desarrollo con `vite dev`
 
@@ -74,4 +84,10 @@ Se puede cambiar a otra plataforma similar como [vercel](https://vercel.com) o [
 
 Para hosteo local se puede crear un [servidor de node](https://kit.svelte.dev/docs/adapter-node).
 
-La base de datos debe ser reimplementada, las querys sql se encuentran en el archivo X (TBD).
+## Migración prisma
+
+Comando para generar el archivo de migración
+
+```bash
+npx prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma --script --output migrations/0001_create_tables.sql
+```

@@ -1,0 +1,186 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Quincalleria {
+  id_quincalleria Int    @id @default(autoincrement())
+  desc_quin       String
+  formula_quin    String
+  precio_quin     Int
+
+  TipoQuincalleria TipoQuincalleria[]
+}
+
+model Perfil {
+  id_perfil    Int    @id @default(autoincrement())
+  codigo_per   Int
+  formula_dim  String
+  formula_cant String
+  kg_ml_per    Float?
+  valor        Int
+
+  TipoPerfil TipoPerfil[]
+}
+
+model Cristal {
+  id_cristal     Int    @id @default(autoincrement())
+  desc_cristal   String
+  precio_cristal Int
+
+  Ventana Ventana[]
+}
+
+model Usuario {
+  id_usuario Int    @id @default(autoincrement())
+  email      String @unique
+  password   String
+  is_admin   Int
+
+  Presupuesto Presupuesto[]
+}
+
+model Presupuesto {
+  id_presupuesto    Int      @id @default(autoincrement())
+  id_usuario        Int
+  fecha             DateTime
+  rut_cliente       String
+  nombre_cliente    String
+  valor_despacho    Int
+  valor_instalacion Int
+  texto_libre       String
+  ganancia_global   Int
+  estado            String
+
+  Usuario  Usuario  @relation(fields: [id_usuario], references: [id_usuario])
+  Cliente  Cliente  @relation(fields: [rut_cliente], references: [rut_cliente])
+  Opciones Opcion[]
+
+  @@index([id_usuario])
+  @@index([rut_cliente])
+}
+
+model Cliente {
+  rut_cliente String @id
+  nombre      String
+  direccion   String
+  email       String
+  telefono    String
+
+  Presupuesto Presupuesto[]
+}
+
+model Opcion {
+  id_opcion      Int @id @default(autoincrement())
+  id_presupuesto Int
+
+  Presupuesto Presupuesto @relation(fields: [id_presupuesto], references: [id_presupuesto], onDelete: Cascade, onUpdate: Cascade)
+  Ventanas    Ventana[]
+
+  @@index([id_presupuesto])
+}
+
+model Ventana {
+  id_ventana      Int    @id @default(autoincrement())
+  cantidad        Int
+  alto            Float
+  ancho           Float
+  precio_unitario Float
+  precio_total    Float
+  item            String
+  ganancia        Float
+  id_color        Int
+  id_material     Int
+  id_cristal      Int
+  id_opcion       Int
+  id_tipo         Int
+
+  Opcion   Opcion   @relation(fields: [id_opcion], references: [id_opcion], onDelete: Cascade, onUpdate: Cascade)
+  Tipo     Tipo     @relation(fields: [id_tipo], references: [id_tipo], onDelete: Cascade, onUpdate: Cascade)
+  Color    Color    @relation(fields: [id_color], references: [id_color], onDelete: Cascade, onUpdate: Cascade)
+  Cristal  Cristal  @relation(fields: [id_cristal], references: [id_cristal], onDelete: Cascade, onUpdate: Cascade)
+  Material Material @relation(fields: [id_material], references: [id_material])
+
+  @@index([id_color])
+  @@index([id_cristal])
+  @@index([id_opcion])
+  @@index([id_tipo])
+}
+
+model Tipo {
+  id_tipo          Int    @id @default(autoincrement())
+  descripcion_tipo String
+  id_material      Int
+  formula_ancho    String
+  formula_alto     String
+  cantidad_cristal String
+  porcentaje_quinc Int?
+  largo_perfil     Float?
+  minimo           Int?
+  maximo           Int?
+  ganancia         Float?
+
+  Ventana          Ventana[]
+  Material         Material           @relation(fields: [id_material], references: [id_material])
+  TipoPerfil       TipoPerfil[]
+  TipoQuincalleria TipoQuincalleria[]
+}
+
+model Material {
+  id_material      Int    @id @default(autoincrement())
+  nombre_material  String
+  texto_libre      String
+  texto_calidad    String
+  texto_termopanel String
+
+  Ventana Ventana[]
+  Tipo    Tipo[]
+}
+
+model TipoPerfil {
+  id_tipo   Int
+  id_perfil Int
+
+  Tipo   Tipo   @relation(fields: [id_tipo], references: [id_tipo], onDelete: Cascade, onUpdate: Cascade)
+  Perfil Perfil @relation(fields: [id_perfil], references: [id_perfil], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([id_tipo, id_perfil])
+}
+
+model TipoQuincalleria {
+  id_tipo         Int
+  id_quincalleria Int
+
+  Tipo         Tipo         @relation(fields: [id_tipo], references: [id_tipo], onDelete: Cascade, onUpdate: Cascade)
+  Quincalleria Quincalleria @relation(fields: [id_quincalleria], references: [id_quincalleria], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([id_tipo, id_quincalleria])
+}
+
+model Color {
+  id_color     Int    @id @default(autoincrement())
+  nombre_color String
+
+  Ventana Ventana[]
+}
+
+model Imagen {
+  id_imagen Int    @id @default(autoincrement())
+  bytes     String
+  height    Int
+  img_group Int
+}
+
+model Constantes {
+  id_constantes          Int @id @default(autoincrement())
+  texto_izquierda        String
+  texto_derecha          String
+  margen_texto_izquierda Int
+  margen_texto_derecha   Int
+  texto_cliente          String
+}

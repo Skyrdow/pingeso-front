@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { materiales } from '$lib/store';
 	// Datos ficticios sobre las ventanas más cotizadas, colores y otros datos
 	const data = {
 		windowsQuoted: [
@@ -20,14 +21,15 @@
 			avgDeliveryTime: '15 días'
 		}
 	};
+
+	console.log($materiales);
 </script>
 
-<div class="min-h-screen lg:w-[60%] mx-auto p-8 bg-gray-100 animate-fade-up">
-	<!-- Título del Dashboard -->
-	<h1 class="text-3xl font-bold mb-6 text-center text-gray-800">
-		Dashboard de Cotización de Ventanas
-	</h1>
-
+<div class="min-h-screen 2xl:w-[80%] xl:w-full lg:w-[50%] md:w-[70%] mx-auto p-8 bg-gray-100">
+	<div class="flex flex-row items-center mb-5">
+		<div class="iconify mdi--keyboard-arrow-right size-5 bg-slate-400"></div>
+		<span class=" text-slate-400">Home</span>
+	</div>
 	<!-- Sección de estadísticas generales -->
 	<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 		<div class="bg-white p-4 rounded shadow text-center">

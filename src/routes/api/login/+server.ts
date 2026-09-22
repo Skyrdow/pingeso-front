@@ -9,19 +9,20 @@ import { getDB } from '$lib';
 
 const TOKEN_SECRET = new TextEncoder().encode(JWT_SECRET);
 
-export const POST: RequestHandler = async ({ request, platform }) => {
+export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 	const connResult = getDB(platform);
 	if (connResult.isErr()) return json({ error: connResult.error }, { status: 400 });
 
-	const db = connResult.value;
-
 	const { email, password } = await request.json<{ email: string; password: string }>();
 
-	const getResult = await getUsuario(db, email);
+	console.log(email, password);
+
+	const getResult = await getUsuario(email);
 
 	if (getResult.isErr()) return json({ error: getResult.error }, { status: 404 });
 
 	const user = getResult.value;
+	console.log(user);
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 	if (!isPasswordValid) {
@@ -37,5 +38,22 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 		.setExpirationTime('1h')
 		.sign(TOKEN_SECRET);
 
+	const exp = new Date();
+	exp.setHours(exp.getHours() + 1);
+
+	cookies.set('authToken', token, {
+		path: '/',
+		sameSite: 'lax',
+		httpOnly: true,
+		expires: exp
+	});
+
 	return json({ token });
+};
+
+// Para cerrar sesión
+export const DELETE: RequestHandler = async ({ cookies }) => {
+	cookies.set('authToken', '', { path: '/', maxAge: 0, httpOnly: true, sameSite: 'lax' });
+
+	return new Response(null, { status: 200, statusText: 'Sesión cerrada' });
 };

@@ -1,133 +1,157 @@
 <script lang="ts">
-	import Ventana from './Ventana.svelte';
 	import Ventana2 from './Ventana2.svelte';
+	import DropdownColumn from './DropdownColumn.svelte';
+	import type { ConstantData, OpcionUI, VentanaModel, VentanaUI } from '$lib/types';
+	import type { Color, Material } from '@prisma/client';
 
 	interface Props {
+		convertirVentana: (ventana: VentanaUI) => VentanaModel;
+		data: ConstantData;
+		opcion: OpcionUI;
 		index: number;
 		mostrar_eliminar_opcion: boolean;
 		eliminarOpcion: (index: number) => void;
+		agregarVentana: any;
+		eliminarVentana: any;
+		ganancia_global?: number; // Añadir ganancia_global
 	}
 
-	let { index, mostrar_eliminar_opcion, eliminarOpcion }: Props = $props();
+	let {
+		convertirVentana,
+		data,
+		opcion = $bindable(),
+		index,
+		mostrar_eliminar_opcion,
+		eliminarOpcion,
+		agregarVentana,
+		eliminarVentana,
+		ganancia_global = 0 // Valor por defecto
+	}: Props = $props();
 
-	let materiales = [
-		{
-			nombre: 'PVC',
-			calidad: 'Alta',
-			descripcion1: 'Sistema Europeo',
-			descripcion2: 'Warm Edge',
-			seleccionado: false
-		},
-		{
-			nombre: 'Aluminio Xelentia',
-			calidad: 'Alta',
-			descripcion1: 'Sistema Premium',
-			descripcion2: 'Warm Edge',
-			seleccionado: false
-		},
-		{
-			nombre: 'Aluminio Estandar',
-			calidad: 'Media',
-			descripcion1: 'Sistema Tradicional',
-			descripcion2: 'Normal',
-			seleccionado: false
-		}
-	];
+	let showMaterialDropdown = $state(false);
+	let showColorDropdown = $state(false);
 
-	let coloresDisponibles = [
-		{ nombre: 'Nogal', seleccionado: false },
-		{ nombre: 'Titanio', seleccionado: false },
-		{ nombre: 'Blanco', seleccionado: false },
-		{ nombre: 'Negro', seleccionado: false },
-		{ nombre: 'Roble Dorado', seleccionado: false },
-		{ nombre: 'Mate', seleccionado: false },
-		{ nombre: 'Antracita', seleccionado: false }
-	];
+	let materiales: Material[] = data.materiales;
+	let colores: Color[] = data.colores;
 
-	let ventanas = $state([
-		{
-			material: '',
-			tipo: '',
-			item: '',
-			cantidad: 1,
-			color: '',
-			alto: 0,
-			ancho: 0,
-			precio_unitario: 0,
-			precio_total: 0
-		}
-	]);
+	let materialesNombre: string[] = $state(materiales.map((material) => material.nombre_material));
+	let coloresNombre: string[] = $state(colores.map((color) => color.nombre_color));
 
-	let sumaTotal = $derived(ventanas.reduce((acc, ventana) => acc + ventana.precio_total, 0));
+	let sumaTotal = $derived(opcion.ventanas.reduce((acc, ventana) => acc + ventana.precio_total, 0));
 
-	let mostrar_eliminar = $derived(ventanas.length > 1);
-	$inspect(ventanas);
+	let sumaTotalConGanancia = $derived(
+		opcion.ventanas.reduce(
+			(acc, ventana) =>
+				acc + ventana.precio_unitario * ventana.cantidad * (1 + ganancia_global / 100),
+			0
+		)
+	);
 
-	function agregarVentana() {
-		ventanas = [
-			...ventanas,
-			{
-				material: '',
-				tipo: '',
-				item: '',
-				cantidad: 1,
-				color: '',
-				alto: 0,
-				ancho: 0,
-				precio_unitario: 0,
-				precio_total: 10
-			}
-		];
+	let mostrar_eliminar = $derived(opcion.ventanas.length > 1);
+
+	function formatoChileno(valor: number) {
+		const truncado = Math.trunc(valor); // Trunca el número
+		return new Intl.NumberFormat('es-CL', {
+			style: 'currency',
+			currency: 'CLP',
+			minimumFractionDigits: 0
+		}).format(truncado);
 	}
 
+	/*
 	function eliminarVentana(index: number) {
-		ventanas = ventanas.filter((_, i) => i !== index);
+		// Eliminar la ventana de la lista principal
+		opcion.ventanas = opcion.ventanas.filter((_, i) => i !== index);
+
+		itemOptions.update((current) => current.filter((_, i) => i !== index));
+		tipoOptions.update((current) => current.filter((_, i) => i !== index));
+		cantidadOptions.update((current) => current.filter((_, i) => i !== index));
+		altoOptions.update((current) => current.filter((_, i) => i !== index));
+		anchoOptions.update((current) => current.filter((_, i) => i !== index));
 	}
+	*/
 </script>
 
-<div class="space-y-4">
-	<h1 class="text-xl font-semibold text-gray-800">Opción {index + 1}</h1>
-
+<div class="space-y-4 bg-white pt-5 px-5 shadow rounded-lg">
 	<!-- Botón para agregar una nueva ventana -->
-	<div class="flex flex-row gap-5 items-center">
-		<button
-			onclick={agregarVentana}
-			class="bg-blue-600 hover:bg-blue-500 transition-all text-white p-2 rounded font-bold"
-			>Agregar Ventana</button>
-		{#if mostrar_eliminar_opcion}
+	<div class="flex flex-row gap-5 items-center justify-between w-full">
+		<h1 class="text-xl font-semibold text-gray-800">Opción {index + 1}</h1>
+		{#if index < 1}
+			<button
+				onclick={agregarVentana}
+				class="bg-teal-600 hover:bg-teal-500 transition-all text-white px-3 p-2 rounded font-bold"
+				>+ Agregar Ventana</button>
+		{/if}
+		{#if mostrar_eliminar_opcion && index >= 1}
 			<button
 				class="bg-red-500 hover:bg-red-400 text-white p-2 rounded font-bold"
 				onclick={() => eliminarOpcion(index)}>
 				Eliminar Opción
 			</button>
-		{:else}
-			<p class="bg-slate-300 text-slate-400 font-bold p-2 rounded h-fit">Eliminar Opción</p>
 		{/if}
 	</div>
 
 	<!-- Lista de ventanas -->
-	<div class="flex flex-col">
-		<table class="flex flex-col border-gray-100 w-full shadow">
-			<thead class="w-full">
-				<tr class="flex flex-row px-4 bg-slate-300 py-2">
-					<th class="mr-8 font-bold">N°</th>
-					<th class="mr-16 font-bold">Material</th>
-					<th class="mr-36 font-bold">Tipo</th>
-					<th class="mr-20 font-bold">Item</th>
-					<th class="mr-9 font-bold">Cantidad</th>
-					<th class="mr-12 font-bold">Color</th>
-					<th class="mr-11 font-bold">Alto</th>
-					<th class="mr-8 font-bold">Ancho</th>
-					<th class="mr-10 font-bold">Precio Uni.</th>
-					<th class=" font-bold">P. Total</th>
+	<div class="flex flex-col rounded-lg">
+		<table class=" table-auto w-full rounded-lg bg-white">
+			<thead class="rounded-lg">
+				<tr class="py-2 items-center rounded-lg">
+					<th class="px-1 pl-2 py-2">N°</th>
+					<th class="px-1 py-2 justify-center">
+						<DropdownColumn
+							onSelectItem={(item) => {
+								console.log(item);
+								opcion.material = item;
+								opcion.ventanas.forEach((ventana) => {
+									ventana.material = opcion.material;
+								});
+							}}
+							columna={'Material'}
+							items={materialesNombre}
+							bind:showDropdown={showMaterialDropdown} />
+					</th>
+					<th class="px-1 py-2"> Tipo </th>
+					<th class="px-1 py-2"> Cristal </th>
+					<th class="px-1 py-2">
+						<DropdownColumn
+							onSelectItem={(item) => {
+								opcion.color = item;
+								opcion.ventanas.forEach((ventana) => {
+									ventana.color = opcion.color;
+								});
+							}}
+							columna={'Color'}
+							items={coloresNombre}
+							bind:showDropdown={showColorDropdown} />
+					</th>
+					<th class="px-1 py-2 min-w-20">Cantidad</th>
+					<th class="px-1 py-2 min-w-20">Ancho</th>
+					<th class="px-1 py-2 min-w-20">Alto</th>
+					<th class="px-1 py-2 min-w-20">Ganancia</th>
+					<th class="px-1 py-2 w-32 min-w-32">Valor Unitario</th>
+					<th class="px-1 py-2 w-32 min-w-32">Valor Total</th>
+					<th class="px-1 pr-2 py-2"></th>
 				</tr>
 			</thead>
-			<tbody class="bg-white text-sm">
-				{#each ventanas as ventana, index}
-					<Ventana2 {ventana} {index} {mostrar_eliminar} {eliminarVentana} />
+			<tbody>
+				{#each opcion.ventanas as ventana, id}
+					<Ventana2
+						{convertirVentana}
+						{data}
+						bind:ventana={opcion.ventanas[id]}
+						{id}
+						bind:ganancia_global
+						option_index={index}
+						{mostrar_eliminar}
+						{eliminarVentana} />
 				{/each}
-				<tr class="flex w-full px-20">
-					<td class="w-full py-2 text-right">Total: ${sumaTotal}</td>
+				<tr>
+					<td colspan="11" class="px-4 py-2 text-right font-bold">
+						<!-- Mostrar total y total con ganancia -->
+						<span class="">
+							Total: {formatoChileno(sumaTotalConGanancia)}
+						</span>
+					</td>
 				</tr>
 			</tbody>
 		</table>
