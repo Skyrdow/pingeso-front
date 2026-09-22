@@ -2,20 +2,7 @@
 	import DatosCotizacion from '$lib/components/DatosCotizacion.svelte';
 	import OpcionVentanas from '$lib/components/OpcionVentanas.svelte';
 	import { generatePDF } from '$lib/services/pdf_generator';
-	import {
-		tipoOptions,
-		anchoOptions,
-		altoOptions,
-		cantidadOptions,
-		cristalOptions,
-		gananciaOptions,
-		precioUnitarioOptions,
-		precioTotalOptions,
-		url,
-		presupuesto,
-		resetStores,
-		editFromHistory
-	} from '$lib/store';
+	import { url, presupuesto, editFromHistory } from '$lib/store';
 	import type {
 		ClienteUI,
 		ConstantData,
@@ -102,76 +89,32 @@
 	function actualizarStoresDesdePresupuesto(presupuestoCargado: PresupuestoModel | undefined) {
 		if (!presupuestoCargado || !presupuestoCargado.Opciones.length) return;
 
-		const primeraOpcion = presupuestoCargado.Opciones[0];
-
-		// Extraer las características de la cotización para editarlas
-		const listaMateriales = primeraOpcion.Ventanas.map((ventana) => {
-			const material = materiales.find((m) => m.id_material === ventana.id_material);
-			return material ? material.nombre_material : 'Desconocido'; // Manejar el caso en que no se encuentre el material
-		});
-		const listaTipos = primeraOpcion.Ventanas.map((ventana) => {
-			const tipo = tipos.find((t) => t.id_tipo === ventana.id_tipo);
-			return tipo ? tipo.descripcion_tipo : 'Desconocido'; // Manejar el caso en que no se encuentre el material
-		});
-		const listaColores = primeraOpcion.Ventanas.map((ventana) => {
-			const color = colores.find((c) => c.id_color === ventana.id_color);
-			return color ? color.nombre_color : 'Desconocido'; // Manejar el caso en que no se encuentre el material
-		});
-		const listaCristal = primeraOpcion.Ventanas.map((ventana) => {
-			const cristal = cristales.find((c) => c.id_cristal === ventana.id_cristal);
-			return cristal ? cristal.desc_cristal : 'Desconocido'; // Manejar el caso en que no se encuentre el material
-		});
-		const listaCantidad = primeraOpcion.Ventanas.map((ventana) => {
-			return ventana.cantidad; // Manejar el caso en que no se encuentre el material
-		});
-		const listaAlto = primeraOpcion.Ventanas.map((ventana) => {
-			return ventana.alto; // Manejar el caso en que no se encuentre el material
-		});
-		const listaAncho = primeraOpcion.Ventanas.map((ventana) => {
-			return ventana.ancho; // Manejar el caso en que no se encuentre el material
-		});
-		const listaGanancia = primeraOpcion.Ventanas.map((ventana) => {
-			return ventana.ganancia; // Manejar el caso en que no se encuentre el material
-		});
-		const listaPrecioUnitario = primeraOpcion.Ventanas.map((ventana) => {
-			return ventana.precio_unitario; // Manejar el caso en que no se encuentre el material
-		});
-		const listaPrecioTotal = primeraOpcion.Ventanas.map((ventana) => {
-			return ventana.precio_total; // Manejar el caso en que no se encuentre el material
-		});
-
 		cliente = presupuestoCargado.Cliente;
 		datosAdicionales.costo_despacho = presupuestoCargado.valor_despacho;
 		datosAdicionales.costo_instalacion = presupuestoCargado.valor_instalacion;
 		datosAdicionales.ganancia_global = presupuestoCargado.ganancia_global;
-		opciones = presupuestoCargado.Opciones.map((opcion, indexOpcion) => {
+		opciones = presupuestoCargado.Opciones.map((opcion) => {
+			const ventanasUI = opcion.Ventanas.map((ventana) => ({
+				material:
+					materiales.find((m) => m.id_material === ventana.id_material)?.nombre_material ?? '',
+				tipo: tipos.find((t) => t.id_tipo === ventana.id_tipo)?.descripcion_tipo ?? '',
+				cantidad: ventana.cantidad,
+				cristal: cristales.find((c) => c.id_cristal === ventana.id_cristal)?.desc_cristal ?? '',
+				color: colores.find((c) => c.id_color === ventana.id_color)?.nombre_color ?? '',
+				alto: ventana.alto,
+				ancho: ventana.ancho,
+				precio_unitario: ventana.precio_unitario,
+				precio_total: ventana.precio_total,
+				ganancia: ventana.ganancia,
+				item: ventana.item
+			}));
+
 			return {
-				material: listaMateriales[indexOpcion] || '',
-				color: listaColores[indexOpcion] || '',
-				ventanas: opcion.Ventanas.map((ventana, indexVentana) => ({
-					material: listaMateriales[indexVentana] || '',
-					tipo: listaTipos[indexVentana] || '',
-					cantidad: listaCantidad[indexVentana] || 1,
-					cristal: listaCristal[indexVentana] || '',
-					color: listaColores[indexVentana] || '',
-					alto: listaAlto[indexVentana] ?? 0,
-					ancho: listaAncho[indexVentana] ?? 0,
-					precio_unitario: listaPrecioUnitario[indexVentana] || 0,
-					precio_total: listaPrecioTotal[indexVentana] || 0,
-					ganancia: listaGanancia[indexVentana] ?? 0,
-					item: ''
-				}))
+				material: ventanasUI[0]?.material ?? '',
+				color: ventanasUI[0]?.color ?? '',
+				ventanas: ventanasUI
 			};
 		});
-
-		tipoOptions.set(listaTipos);
-		cristalOptions.set(listaCristal);
-		cantidadOptions.set(listaCantidad);
-		altoOptions.set(listaAlto);
-		anchoOptions.set(listaAncho);
-		gananciaOptions.set(listaGanancia);
-		precioUnitarioOptions.set(listaPrecioUnitario);
-		precioTotalOptions.set(listaPrecioTotal);
 	}
 
 	function resetFormValues() {
@@ -214,14 +157,12 @@
 
 	function cerrarSuccessModal() {
 		resetFormValues();
-		resetStores();
 		successModal = !successModal;
 	}
 
 	function visualizarCotizacion() {
 		window.open($url);
 		resetFormValues();
-		resetStores();
 		successModal = !successModal;
 	}
 
@@ -264,7 +205,7 @@
 	}
 
 	// Función para convertir la lista de VentanaUI a VentanaModel
-	function convertirVentana(ventana: VentanaUI): VentanaModel {
+	function convertirVentana(ventana: VentanaUI, gananciaGlobal = 0): VentanaModel {
 		// Buscar el id del material, tipo, color y cristal en sus respectivas listas
 		const id_material =
 			materiales.find((m) => m.nombre_material === ventana.material)?.id_material ?? 0;
@@ -284,40 +225,17 @@
 			item: ventana.item,
 			alto: ventana.alto ?? 0,
 			ancho: ventana.ancho ?? 0,
-			precio_unitario: ventana.precio_unitario,
-			precio_total: ventana.precio_total,
+			precio_unitario: ventana.precio_unitario * (1 + gananciaGlobal / 100),
+			precio_total: ventana.precio_total * (1 + gananciaGlobal / 100),
 			ganancia: ventana.ganancia ?? 0
 		};
 	}
 
 	// Función para convertir la lista de VentanaUI a VentanaModel
 	function convertirVentanas(ventanas: VentanaUI[]): VentanaModel[] {
-		return ventanas.map((ventana) => {
-			// Buscar el id del material, tipo, color y cristal en sus respectivas listas
-			const id_material =
-				materiales.find((m) => m.nombre_material === ventana.material)?.id_material ?? 0;
-			const id_tipo =
-				tipos.find((t) => t.descripcion_tipo === ventana.tipo && t.id_material === id_material)
-					?.id_tipo ?? 0;
-			const id_color = colores.find((c) => c.nombre_color === ventana.color)?.id_color ?? 0;
-			const id_cristal = cristales.find((c) => c.desc_cristal === ventana.cristal)?.id_cristal ?? 0;
-
-			// Devolver el objeto convertido a VentanaModel
-			return {
-				cantidad: ventana.cantidad,
-				id_material,
-				id_tipo,
-				id_color,
-				id_cristal,
-				item: ventana.item,
-				alto: ventana.alto ?? 0,
-				ancho: ventana.ancho ?? 0,
-				precio_unitario:
-					ventana.precio_unitario * (1 + (datosAdicionales.ganancia_global ?? 0) / 100),
-				precio_total: ventana.precio_total * (1 + (datosAdicionales.ganancia_global ?? 0) / 100),
-				ganancia: ventana.ganancia ?? 0
-			};
-		});
+		return ventanas.map((ventana) =>
+			convertirVentana(ventana, datosAdicionales.ganancia_global ?? 0)
+		);
 	}
 
 	function crearOpcionesModel(opciones: OpcionUI[]): { Ventanas: VentanaModel[] }[] {
@@ -378,22 +296,13 @@
 		}
 	}
 
-	function eliminarVentana(_opcionIndex: number, ventanaIndex: number) {
+	function eliminarVentana(ventanaIndex: number) {
 		opciones = opciones.map((opcion) => {
 			return {
 				...opcion,
 				ventanas: opcion.ventanas.filter((_, i) => i !== ventanaIndex)
 			};
 		});
-
-		tipoOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		cantidadOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		cristalOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		altoOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		anchoOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		gananciaOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		precioUnitarioOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
-		precioTotalOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
 	}
 
 	function aplicarGananciaGlobal(gananciaGlobal: number) {
@@ -482,16 +391,8 @@
 							}
 						];
 					}
-					$tipoOptions.push('');
-					$cristalOptions.push('');
-					$altoOptions.push();
-					$anchoOptions.push();
-					$cantidadOptions.push(1);
-					$gananciaOptions.push();
-					$precioUnitarioOptions.push();
-					$precioTotalOptions.push();
 				}}
-				eliminarVentana={(ventanaIndex: number) => eliminarVentana(opcionIndex, ventanaIndex)}
+				{eliminarVentana}
 				bind:opcion={opciones[opcionIndex]}
 				index={opcionIndex}
 				{eliminarOpcion}

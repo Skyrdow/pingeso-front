@@ -9,59 +9,42 @@
 	}
 
 	let { columna, items, showDropdown = $bindable(), onSelectItem }: Props = $props();
+	let dropdownElement: HTMLElement;
 
-	let dropdownElement: HTMLElement | null = null;
-
-	function toggleDropdown() {
-		showDropdown = !showDropdown;
-	}
-
-	function selectItem() {
-		showDropdown = !showDropdown;
-	}
-
-	function handleClickOutside(event: MouseEvent) {
-		if (dropdownElement && !dropdownElement.contains(event.target as Node)) {
-			showDropdown = false; // Cierra el dropdown si el clic está fuera del componente
-		}
-	}
-
-	// Agrega y elimina el evento de clic global
 	onMount(() => {
+		function handleClickOutside(event: MouseEvent) {
+			if (!dropdownElement.contains(event.target as Node)) showDropdown = false;
+		}
+
 		document.addEventListener('click', handleClickOutside);
 		return () => document.removeEventListener('click', handleClickOutside);
 	});
 </script>
 
 <div
-	class="relative h-fit my-auto flex flex-row sm:mx-0 bg-inherit rounded-lg z-20 w-full"
+	class="relative z-20 my-auto flex h-fit w-full flex-row rounded-lg bg-inherit"
 	bind:this={dropdownElement}>
 	<button
-		class="flex flex-row h-fit my-auto items-center transition-all text-base hover:bg-opacity-45 bg-white bg-opacity-25 rounded-lg px-2 py-1"
-		onclick={toggleDropdown}>
+		type="button"
+		class="inline-flex min-h-8 items-center gap-1 rounded-lg px-2 text-xs font-bold uppercase tracking-wide text-teal-900 transition hover:bg-teal-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+		aria-expanded={showDropdown}
+		onclick={() => (showDropdown = !showDropdown)}>
 		{columna}
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="ml-1"
-			width="1em"
-			height="1em"
-			viewBox="0 0 1024 1024"
-			><path
-				fill="black"
-				d="M831.872 340.864L512 652.672L192.128 340.864a30.59 30.59 0 0 0-42.752 0a29.12 29.12 0 0 0 0 41.6L489.664 714.24a32 32 0 0 0 44.672 0l340.288-331.712a29.12 29.12 0 0 0 0-41.728a30.59 30.59 0 0 0-42.752 0z" /></svg>
+		<span class="iconify mdi--chevron-down size-4" aria-hidden="true"></span>
 	</button>
-	<div
-		class=" absolute w-full shadow flex flex-col bg-white top-0 left-20 {showDropdown
-			? 'block'
-			: 'hidden'}">
-		{#each items as item}
-			<button
-				class=" hover:bg-slate-200 p-2"
-				onclick={() => {
-					selectItem();
-					onSelectItem(item);
-				}}
-				aria-label={item}>{item}</button>
-		{/each}
-	</div>
+	{#if showDropdown}
+		<div
+			class="absolute left-0 top-full mt-1 flex max-h-60 min-w-44 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 text-left shadow-lg">
+			{#each items as item}
+				<button
+					type="button"
+					class="px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-teal-50 hover:text-teal-950"
+					aria-label={item}
+					onclick={() => {
+						showDropdown = false;
+						onSelectItem(item);
+					}}>{item}</button>
+			{/each}
+		</div>
+	{/if}
 </div>

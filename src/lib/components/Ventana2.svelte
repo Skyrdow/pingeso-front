@@ -1,12 +1,4 @@
 <script lang="ts">
-	import {
-		tipoOptions,
-		cantidadOptions,
-		altoOptions,
-		anchoOptions,
-		cristalOptions,
-		gananciaOptions
-	} from '$lib/store';
 	import type { ConstantData, VentanaModel, VentanaUI } from '$lib/types';
 	import type { Tipo } from '@prisma/client';
 
@@ -34,9 +26,6 @@
 	// Mensajes para mostrar si alto/ancho quedan fuera de los rangos
 	let msgAlto = $state('');
 
-	//$inspect('tipo ventana', ventana.tipo)
-	//$inspect('lista tipo', $tipoOptions);
-
 	//Reactividad para obtener los tipos de acuerdo al material seleccionado
 	$effect(() => {
 		const materialSeleccionado = data.materiales.find(
@@ -47,36 +36,6 @@
 		} else {
 			// Filtra solo los tipos que tengan el mismo id_material
 			tiposFiltrados = data.tipos.filter((t) => t.id_material === materialSeleccionado.id_material);
-		}
-	});
-
-	tipoOptions.subscribe((value) => {
-		if (value[id] !== undefined) {
-			ventana.tipo = value[id]; // Actualiza solo si hay un valor definido
-		}
-	});
-
-	cristalOptions.subscribe((value) => {
-		if (value[id] !== undefined) {
-			ventana.cristal = value[id]; // Actualiza solo si hay un valor definido
-		}
-	});
-
-	cantidadOptions.subscribe((value) => {
-		if (value[id] !== undefined) {
-			ventana.cantidad = value[id]; // Actualiza solo si hay un valor definido
-		}
-	});
-
-	altoOptions.subscribe((value) => {
-		if (value[id] !== undefined) {
-			ventana.alto = value[id]; // Actualiza solo si hay un valor definido
-		}
-	});
-
-	anchoOptions.subscribe((value) => {
-		if (value[id] !== undefined) {
-			ventana.ancho = value[id]; // Actualiza solo si hay un valor definido
 		}
 	});
 
@@ -140,18 +99,22 @@
 	});
 </script>
 
-<tr class=" border-b">
-	<td class="px-1 pl-2 py-1">#{id + 1}</td>
+<tr class="border-b border-slate-100 align-middle last:border-0">
+	<td class="px-3 py-2 font-semibold tabular-nums text-slate-500">{id + 1}</td>
 
 	<!-- Material Selector -->
 	<td class="px-1 py-1">
-		<p class="p-2 rounded-md w-44 bg-white border truncate overflow-hidden">{ventana.material}</p>
+		<p
+			class="w-44 truncate overflow-hidden rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-700">
+			{ventana.material}
+		</p>
 	</td>
 
 	<!-- Tipo Selector -->
 	<td class="px-1 py-1">
 		<select
 			bind:value={ventana.tipo}
+			aria-label="Tipo de ventana {id + 1}"
 			onchange={() => {
 				const ganancia = tiposFiltrados.find(
 					(tipo) => tipo.descripcion_tipo === ventana.tipo
@@ -159,13 +122,8 @@
 				if (ganancia !== null) {
 					ventana.ganancia = ganancia;
 				}
-				/*tipoOptions.update((current) => {
-					const updated = [...current]; // Crear una copia del arreglo actual
-					updated[id] = ventana.tipo;
-					return updated;
-				});*/
 			}}
-			class="p-2 rounded-md bg-white border w-44 truncate overflow-hidden whitespace-nowrap">
+			class="min-h-10 w-44 truncate overflow-hidden whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20">
 			<option selected disabled value="">Selecciona un tipo</option>
 			{#each tiposFiltrados as option}
 				<option class="w-auto">{option.descripcion_tipo}</option>
@@ -177,14 +135,8 @@
 	<td class="px-1 py-1">
 		<select
 			bind:value={ventana.cristal}
-			onchange={() => {
-				cristalOptions.update((current) => {
-					const updated = [...current]; // Crear una copia del arreglo actual
-					updated[id] = ventana.cristal;
-					return updated;
-				});
-			}}
-			class="p-2 rounded-md bg-white border w-32 truncate overflow-hidden whitespace-nowrap">
+			aria-label="Cristal de ventana {id + 1}"
+			class="min-h-10 w-32 truncate overflow-hidden whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20">
 			<option selected disabled value="">Selecciona un tipo</option>
 			{#each data.cristales as option}
 				<option class="w-auto">{option.desc_cristal}</option>
@@ -194,7 +146,10 @@
 
 	<!-- Color Input -->
 	<td class="px-1 py-1">
-		<p class="p-2 rounded-md bg-white border w-24 truncate">{ventana.color}</p>
+		<p
+			class="w-24 truncate rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-700">
+			{ventana.color}
+		</p>
 	</td>
 
 	<!-- Cantidad Input -->
@@ -202,15 +157,9 @@
 		<input
 			type="number"
 			bind:value={ventana.cantidad}
-			onchange={() => {
-				cantidadOptions.update((current) => {
-					const updated = [...current]; // Crear una copia del arreglo actual
-					updated[id] = ventana.cantidad;
-					return updated;
-				});
-			}}
+			aria-label="Cantidad de ventana {id + 1}"
 			min="1"
-			class="p-2 border rounded-md w-full" />
+			class="min-h-10 w-full rounded-lg border border-slate-300 px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20" />
 	</td>
 
 	<!-- Dimensiones Alto y Ancho -->
@@ -218,16 +167,8 @@
 		<input
 			type="number"
 			bind:value={ventana.ancho}
-			oninput={() => {
-				anchoOptions.update((current) => {
-					const updated = [...current]; // Crear una copia del arreglo actual
-					if (ventana.ancho !== undefined) {
-						updated[id] = ventana.ancho;
-					}
-					return updated;
-				});
-			}}
-			class="p-2 border rounded-md w-full"
+			aria-label="Ancho de ventana {id + 1} en centímetros"
+			class="min-h-10 w-full rounded-lg border border-slate-300 px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
 			placeholder="0" />
 	</td>
 	<td class="px-1 py-1">
@@ -235,22 +176,14 @@
 			<input
 				type="number"
 				bind:value={ventana.alto}
-				oninput={() => {
-					altoOptions.update((current) => {
-						const updated = [...current]; // Crear una copia del arreglo actual
-						if (ventana.alto !== undefined) {
-							updated[id] = ventana.alto;
-						}
-						return updated;
-					});
-				}}
-				class="p-2 border rounded-md w-full"
+				aria-label="Alto de ventana {id + 1} en centímetros"
+				class="min-h-10 w-full rounded-lg border border-slate-300 px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
 				placeholder="0" />
 			<!-- Tooltip si hay msgAlto -->
 			<!-- Mensaje Amarillo -->
 			{#if msgAlto}
 				<div
-					class="absolute -bottom-13 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs rounded px-2 py-1 w-max z-10 shadow-md">
+					class="absolute left-1/2 top-full z-10 mt-1 w-max -translate-x-1/2 rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-950 shadow-md">
 					{msgAlto}
 				</div>
 			{/if}
@@ -262,29 +195,23 @@
 		<input
 			type="number"
 			bind:value={ventana.ganancia}
-			onchange={() => {
-				gananciaOptions.update((current) => {
-					const updated = [...current]; // Crear una copia del arreglo actual
-					if (ventana.ganancia !== undefined) {
-						updated[id] = ventana.ganancia;
-					}
-					return updated;
-				});
-			}}
-			class="p-2 border rounded-md w-full"
+			aria-label="Margen de ventana {id + 1}"
+			class="min-h-10 w-full rounded-lg border border-slate-300 px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
 			placeholder="0" />
 	</td>
 
 	<!-- Precio Unitario -->
 	<td class="px-1 py-1">
-		<p class="p-2 rounded-md w-full bg-white border">
+		<p
+			class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm font-medium tabular-nums text-slate-800">
 			{formatoChileno(ventana.precio_unitario * (1 + ganancia_global / 100))}
 		</p>
 	</td>
 
 	<!-- Precio Total -->
 	<td class="px-1 py-1">
-		<p class="p-2 rounded-md w-full bg-white border">
+		<p
+			class="rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm font-semibold tabular-nums text-teal-950">
 			{formatoChileno(ventana.precio_total * (1 + ganancia_global / 100))}
 		</p>
 	</td>
@@ -292,7 +219,10 @@
 	<!-- Delete Button -->
 	<td class="px-1 pr-2 py-1">
 		{#if mostrar_eliminar}
-			<button class="text-red-500" aria-label="delete" onclick={() => eliminarVentana(id)}>
+			<button
+				class="grid size-10 place-items-center rounded-lg text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+				aria-label="Eliminar ventana {id + 1}"
+				onclick={() => eliminarVentana(id)}>
 				<span class="size-8 iconify mdi--delete align-middle"></span>
 			</button>
 		{:else}

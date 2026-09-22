@@ -135,7 +135,7 @@
 	</div>
 
 	<div
-		class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+		class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-5">
 		<label for="buscar-cotizacion" class="sr-only">Buscar cotización por cliente o RUT</label>
 		<div class="relative w-full sm:max-w-md">
 			<span
@@ -162,11 +162,11 @@
 
 	<div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
 		<table class="w-full min-w-[780px] table-auto">
-			<thead class="bg-gray-200 text-gray-700">
+			<thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
 				<tr>
-					<th class="py-3 px-4 text-left">Cliente</th>
-					<th class="py-3 px-4 text-left min-w-48 w-52">Materiales</th>
-					<th class="py-3 px-4 text-left"
+					<th scope="col" class="px-4 py-3 text-left">Cliente</th>
+					<th scope="col" class="min-w-48 w-52 px-4 py-3 text-left">Materiales</th>
+					<th scope="col" class="px-4 py-3 text-left"
 						><button
 							type="button"
 							class="inline-flex items-center gap-1 font-semibold"
@@ -181,19 +181,20 @@
 								aria-hidden="true"></span
 							></button
 						></th>
-					<th class="py-3 px-4 text-left">Valor presupuesto</th>
+					<th scope="col" class="px-4 py-3 text-left">Valor presupuesto</th>
 					<!--<th>Despacho</th>
 				<th>Instalación</th>-->
-					<th class="py-3 px-4 min-w-28 w-32 text-center">Estado</th>
-					<th class="py-3 px-6 text-right min-w-28 w-32">Acciones</th>
+					<th scope="col" class="min-w-28 w-32 px-4 py-3 text-center">Estado</th>
+					<th scope="col" class="min-w-28 w-32 px-6 py-3 text-right">Acciones</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each paginatedCotizaciones as cotizacion}
-					<tr class="border-b border-gray-200 hover:bg-gray-100">
-						<td class="py-3 px-4 truncate">{cotizacion.nombre_cliente}</td>
-						<td class="py-3 px-4">
-							<div class="w-80 truncate overflow-hidden whitespace-nowrap space-x-3">
+					<tr class="border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
+						<td class="truncate px-4 py-3 font-semibold text-slate-900"
+							>{cotizacion.nombre_cliente}</td>
+						<td class="px-4 py-3 text-slate-600">
+							<div class="w-80 truncate overflow-hidden whitespace-nowrap">
 								{#each cotizacion.Opciones as opcion, index}
 									{getNombreMaterial(opcion.Ventanas[0]?.id_material ?? 0)}
 									{index < cotizacion.Opciones.length - 1 ? ',' : ''}
@@ -202,11 +203,12 @@
 						</td>
 						<!--<td class="py-3 px-4">{cotizacion.Cliente?.direccion}</td>
 					<td class="py-3 px-4">{cotizacion.Cliente?.rut_cliente}</td> -->
-						<td class="py-3 px-4">{new Date(cotizacion.fecha).toLocaleDateString()}</td>
+						<td class="px-4 py-3 text-slate-600"
+							>{new Date(cotizacion.fecha).toLocaleDateString('es-CL')}</td>
 						<!--<td class="py-3 px-4">{formatoChileno(cotizacion.valor_despacho)}</td>
 					<td class="py-3 px-4">{formatoChileno(cotizacion.valor_instalacion)}</td>-->
-						<td class="py-3 px-4 text-left">
-							<div class=" space-x-3">
+						<td class="px-4 py-3 text-left">
+							<div class="space-x-3 text-sm font-medium tabular-nums text-slate-800">
 								{#each cotizacion.Opciones as opcion, index}
 									<b>{index + 1}:</b>
 									{formatoChileno(
@@ -218,7 +220,7 @@
 						</td>
 						<td class="py-3 px-4">
 							<select
-								class="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+								class="min-h-10 rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-700 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
 								aria-label="Estado de la cotización de {cotizacion.nombre_cliente}"
 								bind:value={cotizacion.estado}
 								onchange={() =>

@@ -617,6 +617,7 @@
 
 <svelte:head>
 	<title>Catálogo | Termoacústicos</title>
+	<meta name="description" content="Administra los materiales y parámetros del cotizador." />
 </svelte:head>
 
 <main
@@ -628,18 +629,23 @@
 			Mantén actualizados los productos, fórmulas e imágenes del cotizador.
 		</p>
 	</div>
-	<select
-		bind:value={constantSelected}
-		class="p-2 rounded-md bg-white border w-44 truncate overflow-hidden whitespace-nowrap">
-		<option selected disabled value="">Selecciona un tipo</option>
-		{#each constantes as option}
-			<option class="w-auto">{option}</option>
-		{/each}
-	</select>
+	<div class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+		<label for="catalogo" class="mb-1.5 block text-sm font-semibold text-slate-700"
+			>Sección del catálogo</label>
+		<select
+			id="catalogo"
+			bind:value={constantSelected}
+			class="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-800 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20">
+			<option selected disabled value="">Selecciona una sección</option>
+			{#each constantes as option}
+				<option>{option}</option>
+			{/each}
+		</select>
+	</div>
 
 	{#if constantSelected == 'Materiales'}
-		<table class="table-auto w-full rounded-lg bg-white shadow">
-			<thead class="w-full bg-gray-200 text-gray-700">
+		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<thead class="w-full bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
 				<tr>
 					<th class="py-2 px-2 text-left">ID</th>
 					<th class="py-2 px-2 text-left">Nombre Material</th>
@@ -654,7 +660,7 @@
 						onclick={() => {
 							openEditMaterialModal(material);
 						}}
-						class=" hover:bg-gray-100">
+						class="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
 						<td class="py-1 px-2 text-left">{material.id_material}</td>
 						<td class="py-1 px-2 text-left">{material.nombre_material}</td>
 						<td class="py-1 px-2 text-left">{material.texto_libre}</td>
@@ -738,8 +744,8 @@
 	{/if}
 
 	{#if constantSelected == 'Cristales'}
-		<table class="table-auto w-full rounded-lg bg-white shadow">
-			<thead class="w-full bg-gray-200 text-gray-700 text-left">
+		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<thead class="w-full bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-600">
 				<tr>
 					<th class="py-2 px-2 text-left">ID</th>
 					<th class="py-2 px-2 text-left">Descripción Cristal</th>
@@ -752,7 +758,7 @@
 						onclick={() => {
 							openEditCristalModal(cristal);
 						}}
-						class=" hover:bg-gray-100">
+						class="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
 						<td class="py-1 px-2 text-left">{cristal.id_cristal}</td>
 						<td class="py-1 px-2 text-left">{cristal.desc_cristal}</td>
 						<td class="py-1 px-2 text-left">{formatoChileno(cristal.precio_cristal)}</td>
@@ -879,8 +885,8 @@
 	{/if}
 
 	{#if constantSelected == 'Tipos'}
-		<table class="table-auto w-full rounded-lg bg-white shadow">
-			<thead class="w-full bg-gray-200 text-gray-700">
+		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<thead class="w-full bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
 				<tr>
 					<th class="px-2 py-2 text-left">ID</th>
 					<th class="px-2 py-2 text-left">Descripción</th>
@@ -901,7 +907,7 @@
 						onclick={() => {
 							openEditTipoModal(tipo);
 						}}
-						class=" hover:bg-gray-100">
+						class="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
 						<td class="px-2 py-1">{tipo.id_tipo}</td>
 						<td class="px-2 py-1">{tipo.descripcion_tipo}</td>
 						<td class="px-2 py-1">{tipo.id_material}</td>
@@ -1059,8 +1065,8 @@
 	{/if}
 
 	{#if constantSelected == 'Colores'}
-		<table class="table-auto w-full rounded-lg bg-white shadow">
-			<thead class="w-full bg-gray-200 text-gray-700">
+		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<thead class="w-full bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
 				<tr>
 					<th class="py-2 px-2 text-left">ID</th>
 					<th class="py-2 px-2 text-left">Nombre Color</th>
@@ -1072,7 +1078,7 @@
 						onclick={() => {
 							openEditColorModal(color);
 						}}
-						class=" hover:bg-gray-100">
+						class="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
 						<td class="py-1 px-2 text-left">{color.id_color}</td>
 						<td class="py-1 px-2 text-left">{color.nombre_color}</td>
 					</tr>
@@ -1286,8 +1292,8 @@
 
 	<!--Tabla perfiles-->
 	{#if constantSelected == 'Perfiles'}
-		<table class="table-auto w-full rounded-lg bg-white shadow">
-			<thead class="w-full bg-gray-200 text-gray-700">
+		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<thead class="w-full bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
 				<tr>
 					<th class="py-2 px-2 text-left">ID</th>
 					<th class="py-2 px-2 text-left">Código Perfil</th>
@@ -1303,7 +1309,7 @@
 						onclick={() => {
 							openEditPerfilModal(perfil);
 						}}
-						class=" hover:bg-gray-100">
+						class="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
 						<td class="py-1 px-2 text-left">{perfil.id_perfil}</td>
 						<td class="py-1 px-2 text-left">{perfil.codigo_per}</td>
 						<td class="py-1 px-2 text-left">{perfil.formula_dim}</td>
@@ -1393,8 +1399,8 @@
 
 	<!--Tabla quincallerias-->
 	{#if constantSelected == 'Quincallerías'}
-		<table class="table-auto w-full rounded-lg bg-white shadow">
-			<thead class="w-full bg-gray-200 text-gray-700">
+		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+			<thead class="w-full bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
 				<tr>
 					<th class="py-3 px-4 text-left">ID</th>
 					<th class="py-3 px-4 text-left">Descripción</th>
@@ -1408,7 +1414,7 @@
 						onclick={() => {
 							openEditQuincalleriaModal(quincalleria);
 						}}
-						class=" hover:bg-gray-100">
+						class="cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-slate-50">
 						<td class="py-2 px-4 text-left">{quincalleria.id_quincalleria}</td>
 						<td class="py-2 px-4 text-left">{quincalleria.desc_quin}</td>
 						<td class="py-2 px-4 text-left">{quincalleria.formula_quin}</td>
