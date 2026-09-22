@@ -1,7 +1,5 @@
 <script lang="ts">
 	import {
-		materialOptions,
-		colorOptions,
 		tipoOptions,
 		cantidadOptions,
 		altoOptions,
@@ -10,7 +8,7 @@
 		gananciaOptions
 	} from '$lib/store';
 	import type { ConstantData, VentanaModel, VentanaUI } from '$lib/types';
-	import type { Cristal, Tipo } from '@prisma/client';
+	import type { Tipo } from '@prisma/client';
 
 	interface Props {
 		convertirVentana: (ventana: VentanaUI) => VentanaModel;
@@ -18,7 +16,6 @@
 		ventana: VentanaUI;
 		ganancia_global: number;
 		id: number;
-		option_index: number;
 		mostrar_eliminar: boolean;
 		eliminarVentana: (id: number) => void;
 	}
@@ -29,19 +26,13 @@
 		ventana = $bindable(),
 		id,
 		ganancia_global = $bindable(),
-		option_index,
 		mostrar_eliminar,
 		eliminarVentana
 	}: Props = $props();
 
-	let tiposLista: Tipo[] = data.tipos;
-	let cristalesLista: Cristal[] = data.cristales;
 	let tiposFiltrados = $state<Tipo[]>([]);
-	let mostrar_porcentaje = false; // Define the variable
-
 	// Mensajes para mostrar si alto/ancho quedan fuera de los rangos
 	let msgAlto = $state('');
-	let msgAncho = $state('');
 
 	//$inspect('tipo ventana', ventana.tipo)
 	//$inspect('lista tipo', $tipoOptions);
@@ -93,7 +84,6 @@
 	$effect(() => {
 		// Limpia mensajes antes de recalcular
 		msgAlto = '';
-		msgAncho = '';
 
 		const tipoSeleccionado = data.tipos.find((t) => t.descripcion_tipo === ventana.tipo);
 		if (!tipoSeleccionado) return;
@@ -134,7 +124,6 @@
 				costoUnitario: number;
 			};
 		} = await response.json();
-		console.log(data);
 
 		ventana.precio_unitario = data.resultado.costoUnitario;
 		ventana.precio_total = data.resultado.costoTotal;
@@ -197,7 +186,7 @@
 			}}
 			class="p-2 rounded-md bg-white border w-32 truncate overflow-hidden whitespace-nowrap">
 			<option selected disabled value="">Selecciona un tipo</option>
-			{#each cristalesLista as option}
+			{#each data.cristales as option}
 				<option class="w-auto">{option.desc_cristal}</option>
 			{/each}
 		</select>

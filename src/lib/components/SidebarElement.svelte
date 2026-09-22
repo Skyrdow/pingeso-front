@@ -1,36 +1,31 @@
 <script lang="ts">
 	interface Props {
-		isExpanded?: boolean;
-		buttonName: any;
+		buttonName: string;
 		icon: string;
 		href?: string;
 		onclick?: () => void;
+		active?: boolean;
 	}
 
-	let { isExpanded = false, buttonName, icon, href, onclick }: Props = $props();
+	let { buttonName, icon, href, onclick, active = false }: Props = $props();
+	const classes = $derived(
+		`inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 ${
+			active ? 'bg-teal-50 text-teal-950' : 'text-slate-600 hover:bg-slate-100 hover:text-teal-950'
+		}`
+	);
 </script>
 
 {#if href}
-	<a
-		{href}
-		class="inline-flex space-x-2 h-full items-center pl-3 pr-4 transition-all hover:bg-teal-500">
-		<!-- sin este size 8 afuera, el icono salta un poco (?) -->
+	<a {href} class={classes} aria-current={active ? 'page' : undefined}>
 		{@render contenido()}
 	</a>
 {:else}
-	<button
-		{onclick}
-		class="inline-flex space-x-2 h-full items-center transition-all hover:bg-teal-500">
+	<button type="button" {onclick} class={classes}>
 		{@render contenido()}
-	</button>{/if}
+	</button>
+{/if}
 
 {#snippet contenido()}
-	<div class="size-8">
-		<span class={'size-8 iconify ' + icon}> </span>
-	</div>
-	{#if isExpanded}
-		<p class="flex w-full animate-fade">
-			{buttonName}
-		</p>
-	{/if}
+	<span class={'iconify size-5 shrink-0 ' + icon} aria-hidden="true"></span>
+	<span>{buttonName}</span>
 {/snippet}

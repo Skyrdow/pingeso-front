@@ -1,6 +1,7 @@
 import type { ConstantData } from '$lib/types';
 import type { PageServerLoad } from './$types';
 import type { ImageGroup } from '$lib/types';
+import type { PresupuestoModel } from '$lib/types';
 import { redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ fetch, locals }) => {
@@ -8,10 +9,10 @@ export const load: PageServerLoad = async ({ fetch, locals }) => {
 		redirect(308, '/');
 	}
 
-	const presupuestos = await fetch('/api/presupuesto', {
+	const presupuestos: PresupuestoModel[] = await fetch('/api/presupuesto', {
 		method: 'GET'
 	}).then((response) => {
-		return response.json();
+		return response.json() as Promise<PresupuestoModel[]>;
 	});
 
 	const constantes: ConstantData = await fetch('/api/constantes', {

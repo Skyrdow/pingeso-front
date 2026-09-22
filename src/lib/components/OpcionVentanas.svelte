@@ -2,7 +2,6 @@
 	import Ventana2 from './Ventana2.svelte';
 	import DropdownColumn from './DropdownColumn.svelte';
 	import type { ConstantData, OpcionUI, VentanaModel, VentanaUI } from '$lib/types';
-	import type { Color, Material } from '@prisma/client';
 
 	interface Props {
 		convertirVentana: (ventana: VentanaUI) => VentanaModel;
@@ -11,8 +10,8 @@
 		index: number;
 		mostrar_eliminar_opcion: boolean;
 		eliminarOpcion: (index: number) => void;
-		agregarVentana: any;
-		eliminarVentana: any;
+		agregarVentana: () => void;
+		eliminarVentana: (index: number) => void;
 		ganancia_global?: number; // Añadir ganancia_global
 	}
 
@@ -31,13 +30,10 @@
 	let showMaterialDropdown = $state(false);
 	let showColorDropdown = $state(false);
 
-	let materiales: Material[] = data.materiales;
-	let colores: Color[] = data.colores;
-
-	let materialesNombre: string[] = $state(materiales.map((material) => material.nombre_material));
-	let coloresNombre: string[] = $state(colores.map((color) => color.nombre_color));
-
-	let sumaTotal = $derived(opcion.ventanas.reduce((acc, ventana) => acc + ventana.precio_total, 0));
+	let materialesNombre: string[] = $derived(
+		data.materiales.map((material) => material.nombre_material)
+	);
+	let coloresNombre: string[] = $derived(data.colores.map((color) => color.nombre_color));
 
 	let sumaTotalConGanancia = $derived(
 		opcion.ventanas.reduce(
@@ -100,7 +96,6 @@
 					<th class="px-1 py-2 justify-center">
 						<DropdownColumn
 							onSelectItem={(item) => {
-								console.log(item);
 								opcion.material = item;
 								opcion.ventanas.forEach((ventana) => {
 									ventana.material = opcion.material;
@@ -134,14 +129,13 @@
 				</tr>
 			</thead>
 			<tbody>
-				{#each opcion.ventanas as ventana, id}
+				{#each opcion.ventanas as ventana, id (ventana)}
 					<Ventana2
 						{convertirVentana}
 						{data}
 						bind:ventana={opcion.ventanas[id]}
 						{id}
 						bind:ganancia_global
-						option_index={index}
 						{mostrar_eliminar}
 						{eliminarVentana} />
 				{/each}

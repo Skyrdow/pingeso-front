@@ -1,21 +1,19 @@
-<footer class="flex flex-col bg-teal-700 text-white p-3 gap-7 divide-y divide-slate-400 px-10">
+<footer class="border-t border-teal-900 bg-teal-950 px-5 py-6 text-teal-100 sm:px-8">
 	<div
-		class="flex flex-col w-fit md:flex-row gap-10 justify-evenly md:w-full bg-inherit py-5 self-center text-white">
-		<div class="flex flex-col">
-			<img class="h-20" src="/logo_termo.png" alt="Termoacústicos logo" />
+		class="mx-auto flex max-w-screen-2xl flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+		<div class="flex items-center gap-3">
+			<span class="grid size-9 place-items-center rounded-lg bg-teal-800 text-amber-300"
+				><span class="iconify mdi--home-city-outline size-5" aria-hidden="true"></span></span>
+			<div>
+				<p class="text-xs font-bold tracking-[0.12em] text-white">TERMOACÚSTICOS</p>
+				<p class="text-xs text-teal-300">Cotizador de ventanas</p>
+			</div>
 		</div>
-		<nav class="flex flex-col">
-			<h3 class="font-bold text-xl uppercase">Contacto soporte</h3>
-			<a href="lucas.mesias@usach.cl" class="text-lg hover:underline">Lucas Mesías</a>
-			<a href="nicolas.aguilera.a@usach.cl" class="text-lg hover:underline">Nicolás Aguilera</a>
-			<a href="alexandra.navarro@usach.cl" class="text-lg hover:underline">Alexandra Navarro</a>
-			<a href="javiera.vergara.s@usach.cl" class="text-lg hover:underline">Javiera Vergara</a>
-		</nav>
-		<nav>
-			<h3 class="font-bold text-xl">
-				<a href="https://github.com/termoacusticos/pingeso-front" class="text-lg hover:underline"
-					>Código fuente</a>
-			</h3>
+		<nav aria-label="Contacto de soporte" class="flex flex-wrap gap-x-5 gap-y-2 text-xs">
+			<a href="mailto:lucas.mesias@usach.cl" class="hover:text-white hover:underline">Soporte</a>
+			<a
+				href="https://github.com/termoacusticos/pingeso-front"
+				class="hover:text-white hover:underline">Código fuente</a>
 		</nav>
 	</div>
 </footer>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 
 	interface Props {
 		columna: string;
@@ -29,10 +29,7 @@
 	// Agrega y elimina el evento de clic global
 	onMount(() => {
 		document.addEventListener('click', handleClickOutside);
-	});
-
-	onDestroy(() => {
-		document.removeEventListener('click', handleClickOutside);
+		return () => document.removeEventListener('click', handleClickOutside);
 	});
 </script>
 

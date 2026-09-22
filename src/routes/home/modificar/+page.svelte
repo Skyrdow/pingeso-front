@@ -12,12 +12,14 @@
 		Tipo
 	} from '@prisma/client';
 	import type { PageData } from './$types';
+	import { untrack } from 'svelte';
 
 	interface Props {
 		data: PageData;
 	}
 
 	let { data }: Props = $props();
+	const initialData = untrack(() => data);
 
 	let constantSelected = $state('');
 	let constantes = [
@@ -101,15 +103,15 @@
 		precio_quin: -1
 	});
 
-	let materiales: Material[] = $state(data.materiales);
-	let tipos: Tipo[] = $state(data.tipos);
-	let cristales: Cristal[] = $state(data.cristales);
-	let colores: Color[] = $state(data.colores);
-	let imagenes: ImageGroup[] = $state(data.imagenes);
+	let materiales: Material[] = $state(initialData.materiales);
+	let tipos: Tipo[] = $state(initialData.tipos);
+	let cristales: Cristal[] = $state(initialData.cristales);
+	let colores: Color[] = $state(initialData.colores);
+	let imagenes: ImageGroup[] = $state(initialData.imagenes);
 	let imagenNueva: Imagen = $state({ bytes: '', id_imagen: 0, img_group: 1, height: 0 });
-	let perfiles: Perfil[] = $state(data.perfiles);
-	let quincallerias: Quincalleria[] = $state(data.quincallerias);
-	let constantes_pdf: Constantes = $state(data.constantes_pdf);
+	let perfiles: Perfil[] = $state(initialData.perfiles);
+	let quincallerias: Quincalleria[] = $state(initialData.quincallerias);
+	let constantes_pdf: Constantes = $state(initialData.constantes_pdf);
 
 	let textoIzq = $state(constantes_pdf.texto_izquierda);
 	let margenIzq = $state(constantes_pdf.margen_texto_izquierda ?? 0);
@@ -241,10 +243,9 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then(() => {
 				editMaterialModal = false;
 				successModal = true;
-				console.log('Respuesta del servidor:', data);
 			})
 			.catch((error) => {
 				console.error('Error durante la solicitud:', error);
@@ -270,10 +271,9 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then(() => {
 				editTipoModal = false;
 				successModal = true;
-				console.log('Respuesta del servidor:', data);
 			})
 			.catch((error) => {
 				console.error('Error durante la solicitud:', error);
@@ -299,10 +299,9 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then(() => {
 				editCristalModal = false;
 				successModal = true;
-				console.log('Respuesta del servidor:', data);
 			})
 			.catch((error) => {
 				console.error('Error durante la solicitud:', error);
@@ -333,12 +332,11 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then((data) => {
 				// Update the crystals list with the new data
 				cristales = [...cristales, data as Cristal];
 				addCristalModal = false;
 				successModal = true;
-				console.log('Cristal agregado:', data);
 			})
 			.catch((error) => {
 				errorMessage = 'Error al agregar el cristal. Por favor intente nuevamente.';
@@ -365,10 +363,9 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then(() => {
 				editColorModal = false;
 				successModal = true;
-				console.log('Respuesta del servidor:', data);
 			})
 			.catch((error) => {
 				console.error('Error durante la solicitud:', error);
@@ -394,12 +391,11 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then((data) => {
 				// Update the colors list with the new data
 				colores = [...colores, data as Color];
 				addColorModal = false;
 				successModal = true;
-				console.log('Color agregado:', data);
 			})
 			.catch((error) => {
 				errorMessage = 'Error al agregar el color. Por favor intente nuevamente.';
@@ -426,10 +422,9 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then(() => {
 				editPerfilModal = false;
 				successModal = true;
-				console.log('Respuesta del servidor:', data);
 			})
 			.catch((error) => {
 				console.error('Error durante la solicitud:', error);
@@ -455,10 +450,9 @@
 				}
 				return response.json();
 			})
-			.then(async (data) => {
+			.then(() => {
 				editQuincalleriaModal = false;
 				successModal = true;
-				console.log('Respuesta del servidor:', data);
 			})
 			.catch((error) => {
 				console.error('Error durante la solicitud:', error);
@@ -525,7 +519,6 @@
 		imagenNueva.img_group = img_group;
 		// CAMBIAR POR INPUT
 		imagenNueva.height = height;
-		console.log(imagenNueva);
 
 		await fetch('/api/imagenes', {
 			method: 'POST',
@@ -533,7 +526,6 @@
 		}).then((response) => {
 			return response.json();
 		});
-		console.log(imagenNueva);
 		imagenNueva.bytes = '';
 		imagenes = await fetch('/api/imagenes', {
 			method: 'GET'
@@ -610,14 +602,11 @@
 			texto_izquierda: textoIzq
 		};
 
-		const response = await fetch('/api/constantes', {
+		await fetch('/api/constantes', {
 			method: 'PUT',
 			body: JSON.stringify(newConstantes)
-		}).then((response) => {
-			return response.json();
 		});
 		location.reload();
-		console.log(response);
 	}
 
 	function adjustHeight(textarea: HTMLTextAreaElement) {
@@ -626,17 +615,18 @@
 	}
 </script>
 
-<div
-	class="min-h-screen w-full p-8 gap-5 flex flex-col bg-gray-100 2xl:w-[80%] xl:w-full lg:w-[50%] md:w-[70%] mx-auto overflow-scroll">
-	<div class="flex flex-row items-center">
-		<button
-			onclick={() => {
-				location.assign('/home');
-			}}
-			aria-label="home"
-			class="hover:underline">Home</button>
-		<div class="iconify mdi--keyboard-arrow-right size-5"></div>
-		<span class=" text-slate-400">Modificar</span>
+<svelte:head>
+	<title>Catálogo | Termoacústicos</title>
+</svelte:head>
+
+<main
+	class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-screen-2xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+	<div>
+		<p class="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Administración</p>
+		<h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-950">Catálogo y configuración</h1>
+		<p class="mt-1 text-sm text-slate-600">
+			Mantén actualizados los productos, fórmulas e imágenes del cotizador.
+		</p>
 	</div>
 	<select
 		bind:value={constantSelected}
@@ -1491,4 +1481,4 @@
 			</div>
 		</div>
 	{/if}
-</div>
+</main>

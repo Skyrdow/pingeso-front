@@ -15,14 +15,11 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 
 	const { email, password } = await request.json<{ email: string; password: string }>();
 
-	console.log(email, password);
-
 	const getResult = await getUsuario(email);
 
 	if (getResult.isErr()) return json({ error: getResult.error }, { status: 404 });
 
 	const user = getResult.value;
-	console.log(user);
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 	if (!isPasswordValid) {

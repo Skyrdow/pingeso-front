@@ -11,8 +11,7 @@
 	let { children, data }: Props = $props();
 </script>
 
-<div class="relative flex flex-col w-full bg-gray-100">
-	<!-- <Navbar /> -->
+<div class="relative flex min-h-screen flex-col bg-[#f4f7f6]">
 	<Sidebar is_admin={data.is_admin} />
 	{@render children()}
 </div>

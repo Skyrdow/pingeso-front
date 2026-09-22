@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, validateJWT } from '$lib';
+import { requireSession } from '$lib/server/auth';
 import {
 	getAllCristales,
 	saveCristal,
@@ -10,14 +10,9 @@ import {
 import type { Cristal } from '@prisma/client';
 
 // GET - Obtener todos los cristales
-export const GET: RequestHandler = async ({ platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const GET: RequestHandler = async ({ platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const cristales = await getAllCristales();
 	if (cristales.isErr()) {
@@ -28,14 +23,9 @@ export const GET: RequestHandler = async ({ platform, cookies }) => {
 };
 
 // POST - Crear nuevo cristal
-export const POST: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const POST: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { cristalData }: { cristalData: Cristal } = await request.json();
 	const result = await saveCristal(cristalData);
@@ -48,14 +38,9 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 };
 
 // PUT - Actualizar cristal existente
-export const PUT: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const PUT: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id, cristalData } = await request.json<{ id: number; cristalData: Cristal }>();
 
@@ -69,14 +54,9 @@ export const PUT: RequestHandler = async ({ request, platform, cookies }) => {
 };
 
 // DELETE - Eliminar cristal
-export const DELETE: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const DELETE: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id_cristal } = await request.json<{ id_cristal: number }>();
 

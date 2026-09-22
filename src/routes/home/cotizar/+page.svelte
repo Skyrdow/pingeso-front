@@ -14,9 +14,7 @@
 		url,
 		presupuesto,
 		resetStores,
-		editFromHistory,
-		materialOptions,
-		colorOptions
+		editFromHistory
 	} from '$lib/store';
 	import type {
 		ClienteUI,
@@ -30,22 +28,22 @@
 	} from '$lib/types';
 	import type { Color, Cristal, Material, Tipo } from '@prisma/client';
 	import { onMount } from 'svelte';
-	import { get } from 'svelte/store';
 
 	const { data }: { data: ConstantData } = $props();
-	const constantData = data; // horrible pero necesito usar data dentro de un fetch
 
 	let successModal = $state(false);
 	let errorModal = $state(false);
+	let enviandoCotizacion = $state(false);
+	let errorFormulario = $state('');
 
-	let imagenes = data.imagenes;
-	let materiales: Material[] = data.materiales;
-	let colores: Color[] = data.colores;
-	let tipos: Tipo[] = data.tipos;
-	let cristales: Cristal[] = data.cristales;
+	let imagenes = $derived(data.imagenes);
+	let materiales: Material[] = $derived(data.materiales);
+	let colores: Color[] = $derived(data.colores);
+	let tipos: Tipo[] = $derived(data.tipos);
+	let cristales: Cristal[] = $derived(data.cristales);
 
-	let materialesNombre: string[] = $state(materiales.map((material) => material.nombre_material));
-	let coloresNombre: string[] = $state(colores.map((color) => color.nombre_color));
+	let materialesNombre: string[] = $derived(materiales.map((material) => material.nombre_material));
+	let coloresNombre: string[] = $derived(colores.map((color) => color.nombre_color));
 
 	let editarPresupuesto = $editFromHistory;
 
@@ -92,18 +90,12 @@
 
 	let mostrar_eliminar_opcion = $derived(opciones.length > 1);
 
-	$inspect('opciones:', opciones);
-	$inspect('materialModal:', materialModal);
-	$inspect('colorModal:', colorModal);
-	$inspect('cliente: ', cliente);
-
 	onMount(() => {
 		if (editarPresupuesto === 1) {
 			const presupuestoHistorial = $presupuesto;
 			actualizarStoresDesdePresupuesto(presupuestoHistorial);
 			editarPresupuesto = 0;
 			editFromHistory.set(0);
-			console.log(get(editFromHistory));
 		}
 	});
 
@@ -172,8 +164,6 @@
 			};
 		});
 
-		//materialOptions.set(listaMateriales);
-		//colorOptions.set(listaColores);
 		tipoOptions.set(listaTipos);
 		cristalOptions.set(listaCristal);
 		cantidadOptions.set(listaCantidad);
@@ -253,7 +243,6 @@
 			precio_unitario: 0,
 			precio_total: 0
 		}));
-		//console.log(nuevas_ventanas);
 
 		// Crear una nueva opción
 		const nuevaOpcion = {
@@ -270,7 +259,7 @@
 		mostrarAgregarOpcion = false;
 	}
 
-	function eliminarOpcion(index: any) {
+	function eliminarOpcion(index: number) {
 		opciones = opciones.filter((_, i) => i !== index);
 	}
 
@@ -338,13 +327,17 @@
 	}
 
 	async function crearCotizacion() {
+		if (enviandoCotizacion) return;
 		if (!validarOpciones(opciones)) {
-			alert('Por favor, complete todos los campos requeridos.');
+			errorFormulario =
+				'Completa material, tipo, color, cristal, medidas, cantidad y margen para cada ventana.';
 			return;
 		}
+		errorFormulario = '';
+		enviandoCotizacion = true;
 		try {
-			let opcionesModel: OpcionModel[] = crearOpcionesModel(opciones);
-			let cotizacion: PresupuestoModel = {
+			const opcionesModel: OpcionModel[] = crearOpcionesModel(opciones);
+			const cotizacion: PresupuestoModel = {
 				id_usuario: 0,
 				fecha: '',
 				valor_despacho: datosAdicionales.costo_despacho ?? 0,
@@ -362,33 +355,26 @@
 				ganancia_global: datosAdicionales.ganancia_global ?? 0,
 				Opciones: opcionesModel
 			};
-			await fetch('/api/presupuesto', {
+			const response = await fetch('/api/presupuesto', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify(cotizacion)
-			})
-				.then((response) => {
-					if (!response.ok) {
-						throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
-					}
-					return response.json();
-				})
-				.then(async (data) => {
-					presupuesto.set(cotizacion);
-					successModal = true;
-					const urlLocal = await generatePDF(cotizacion, imagenes, constantData);
-					url.set(urlLocal);
-					console.log('Respuesta del servidor:', data);
-				})
-				.catch((error) => {
-					errorModal = true;
-					console.error('Error durante la solicitud:', error);
-				});
+			});
+			if (!response.ok) {
+				throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
+			}
+			await response.json();
+			const urlLocal = await generatePDF(cotizacion, imagenes, data);
+			presupuesto.set(cotizacion);
+			url.set(urlLocal);
+			successModal = true;
 		} catch (error) {
 			errorModal = true;
 			console.error('Error al crear la cotización:', error);
+		} finally {
+			enviandoCotizacion = false;
 		}
 	}
 
@@ -410,23 +396,6 @@
 		precioTotalOptions.update((current) => current.filter((_, i) => i !== ventanaIndex));
 	}
 
-	async function handleCalcularCosto(ventana: VentanaUI) {
-		const response = await fetch('/api/calculadora', {
-			method: 'POST',
-			body: JSON.stringify(convertirVentana(ventana))
-		});
-		const data: {
-			resultado: {
-				costoTotal: number;
-				costoUnitario: number;
-			};
-		} = await response.json();
-		//console.log(data);
-
-		ventana.precio_unitario = data.resultado.costoUnitario;
-		ventana.precio_total = data.resultado.costoTotal;
-	}
-
 	function aplicarGananciaGlobal(gananciaGlobal: number) {
 		if (gananciaGlobal) {
 			opciones = opciones.map((opcion) => ({
@@ -443,38 +412,6 @@
 		}
 	}
 
-	// Función para calcular el total con ganancia
-	function calcularTotalConGanancia(
-		opcion: { material?: string; color?: string; ventanas: any },
-		gananciaGlobal: number | undefined
-	) {
-		if (!gananciaGlobal) return 0;
-		return opcion.ventanas.reduce(
-			(total: number, ventana: { precio_unitario: number; cantidad: number }) =>
-				total + ventana.precio_unitario * ventana.cantidad * (1 + gananciaGlobal / 100),
-			0
-		);
-	}
-	/*
-	$effect (() => {
-		for (const opcion of opciones) {
-			for (const ventana of opcion.ventanas) {
-				if (ventana.alto !== undefined && ventana.ancho !== undefined) {
-					handleCalcularCosto(ventana);
-				}
-			}
-		}
-	}); */
-
-	// svelte-ignore non_reactive_update
-	let formIsValid = false;
-
-	// Reactive statement: each time `opciones` changes, we recalculate
-	$effect(() => {
-		formIsValid = validarOpciones(opciones);
-	});
-
-	// The validation functions
 	function validarVentana(ventana: VentanaUI): boolean {
 		if (!ventana.material || ventana.material.trim() === '') return false;
 		if (!ventana.tipo || ventana.tipo.trim() === '') return false;
@@ -503,24 +440,26 @@
 	}
 </script>
 
-<div class="flex flex-col bg-gray-100 p-8 gap-5 xl:w-full 2xl:w-[80%] mx-auto">
-	<div class="flex flex-row items-center">
-		<button
-			onclick={() => {
-				location.assign('/home');
-			}}
-			aria-label="home"
-			class="hover:underline">Home</button>
-		<div class="iconify mdi--keyboard-arrow-right size-5"></div>
-		<span class=" text-slate-400">Cotizar</span>
+<svelte:head>
+	<title>Nueva cotización | Termoacústicos</title>
+</svelte:head>
+
+<main
+	class="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-screen-2xl flex-col gap-5 px-4 py-6 sm:px-6 lg:px-8">
+	<div>
+		<p class="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Presupuestos</p>
+		<h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-950">Nueva cotización</h1>
+		<p class="mt-1 text-sm text-slate-600">
+			Completa los datos del cliente y agrega una o más opciones de ventanas.
+		</p>
 	</div>
 	<DatosCotizacion
 		bind:cliente
 		bind:datos_adicionales={datosAdicionales}
-		on:aplicarGananciaGlobal={(event) => aplicarGananciaGlobal(event.detail)} />
+		onAplicarGananciaGlobal={aplicarGananciaGlobal} />
 	<!-- Ventanas -->
 	<div class="space-y-6 w-full">
-		{#each opciones as opcion, opcionIndex}
+		{#each opciones as opcion, opcionIndex (opcion)}
 			<OpcionVentanas
 				{convertirVentana}
 				{data}
@@ -571,28 +510,45 @@
 		</div>-->
 		{/each}
 
-		<div class="bg-white shadow rounded-lg w-full p-5 flex flex-col gap-5">
-			<label for="texto_libre" class="text-xl font-medium">Notas adicionales</label>
+		<div
+			class="flex w-full flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+			<label for="texto_libre" class="font-bold text-slate-900"
+				>Notas adicionales <span class="font-normal text-slate-500">(opcional)</span></label>
 			<textarea
 				name="texto_libre"
 				bind:value={texto_libre}
-				placeholder="Introducir texto de pie de página"
-				class="w-full min-h-20 resize-none border rounded-lg p-1"></textarea>
+				placeholder="Detalles que quieras incluir en el presupuesto…"
+				class="min-h-24 w-full resize-y rounded-lg border border-slate-300 p-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+			></textarea>
 		</div>
 
 		<!-- Botón para agregar nueva ventana -->
-		<div class="flex flex-row w-full justify-center gap-10">
+		<div
+			class="sticky bottom-0 z-10 -mx-4 flex flex-col-reverse gap-3 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:justify-end sm:gap-3 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
 			<button
-				class="flex flex-row mt-4 bg-teal-600 hover:bg-teal-500 font-bold transition-all text-white px-4 py-2 rounded items-center"
+				type="button"
+				class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-teal-800 px-5 font-bold text-teal-900 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
 				onclick={cambiarAgregarOpcion}>
-				<span class=" iconify mdi--plus size-6"></span> Agregar otra opción
+				<span class="iconify mdi--plus size-5" aria-hidden="true"></span> Agregar otra opción
 			</button>
 			<button
-				class="mt-4 bg-amber-500 hover:bg-amber-600 font-bold transition-all text-white px-4 py-2 rounded"
+				type="button"
+				disabled={enviandoCotizacion}
+				class="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-teal-900 px-6 font-bold text-white shadow-sm transition hover:bg-teal-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
 				onclick={crearCotizacion}>
-				Crear cotización
+				{#if enviandoCotizacion}<span
+						class="iconify mdi--loading size-5 animate-spin"
+						aria-hidden="true"></span
+					>{:else}<span class="iconify mdi--check-circle-outline size-5" aria-hidden="true"></span
+					>{/if}
+				{enviandoCotizacion ? 'Creando…' : 'Crear presupuesto'}
 			</button>
 		</div>
+		{#if errorFormulario}<p
+				class="rounded-lg bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950"
+				role="alert">
+				{errorFormulario}
+			</p>{/if}
 	</div>
 
 	{#if successModal}
@@ -717,4 +673,4 @@
 			</div>
 		</div>
 	{/if}
-</div>
+</main>

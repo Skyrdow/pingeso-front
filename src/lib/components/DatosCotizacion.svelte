@@ -4,65 +4,122 @@
 	interface Props {
 		cliente: ClienteUI;
 		datos_adicionales: DatosAdicionales;
+		onAplicarGananciaGlobal: (ganancia: number) => void;
 	}
 
-	let { cliente = $bindable(), datos_adicionales = $bindable() }: Props = $props();
+	let {
+		cliente = $bindable(),
+		datos_adicionales = $bindable(),
+		onAplicarGananciaGlobal
+	}: Props = $props();
 </script>
 
-<div class="flex flex-row w-full space-x-5 justify-between">
-	<!-- Contenedor Datos Cliente -->
-	<div class="flex flex-col w-[50%] space-y-3 bg-white px-7 pt-7 pb-8 rounded-lg shadow">
-		<h1 class="text-xl font-medium">Datos Cliente</h1>
-		<div class="flex w-full gap-5">
-			<input
-				type="text"
-				placeholder="Nombre del cliente"
-				class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-				bind:value={cliente.nombre} />
-			<input
-				type="text"
-				placeholder="RUT (Ej: 12345678-9)"
-				maxlength="10"
-				minlength="10"
-				class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-				bind:value={cliente.rut_cliente} />
+<div class="grid w-full gap-4 lg:grid-cols-2">
+	<div
+		class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+		<div>
+			<h2 class="text-lg font-bold text-slate-900">Datos del cliente</h2>
+			<p class="mt-1 text-sm text-slate-600">Información de contacto del presupuesto.</p>
 		</div>
-		<input
-			type="text"
-			placeholder="Correo electrónico"
-			class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-			bind:value={cliente.email} />
-		<input
-			type="text"
-			placeholder="Teléfono"
-			class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-			bind:value={cliente.telefono} />
-		<input
-			type="text"
-			placeholder="Dirección"
-			class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-			bind:value={cliente.direccion} />
+		<div class="grid gap-4 sm:grid-cols-2">
+			<div class="sm:col-span-2">
+				<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="cliente-nombre"
+					>Nombre del cliente</label>
+				<input
+					type="text"
+					id="cliente-nombre"
+					placeholder="Nombre y apellido / razón social"
+					class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+					bind:value={cliente.nombre} />
+			</div>
+			<div>
+				<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="cliente-rut"
+					>RUT</label>
+				<input
+					type="text"
+					id="cliente-rut"
+					placeholder="RUT (Ej: 12345678-9)"
+					maxlength="10"
+					class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+					bind:value={cliente.rut_cliente} />
+			</div>
+			<div>
+				<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="cliente-telefono"
+					>Teléfono</label>
+				<input
+					type="tel"
+					id="cliente-telefono"
+					autocomplete="tel"
+					placeholder="+56 9 1234 5678"
+					class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+					bind:value={cliente.telefono} />
+			</div>
+			<div class="sm:col-span-2">
+				<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="cliente-email"
+					>Correo electrónico</label>
+				<input
+					type="email"
+					id="cliente-email"
+					autocomplete="email"
+					placeholder="nombre@correo.cl"
+					class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+					bind:value={cliente.email} />
+			</div>
+			<div class="sm:col-span-2">
+				<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="cliente-direccion"
+					>Dirección</label>
+				<input
+					type="text"
+					id="cliente-direccion"
+					autocomplete="street-address"
+					placeholder="Calle, número y comuna"
+					class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+					bind:value={cliente.direccion} />
+			</div>
+		</div>
 	</div>
 
-	<!-- Contenedor Datos Adicionales -->
-	<div class="flex flex-col w-[50%] space-y-3 bg-white px-7 pt-7 pb-8 rounded-lg shadow">
-		<h1 class="text-xl font-medium">Datos Adicionales</h1>
-		<input
-			type="number"
-			placeholder="Costo de Despacho"
-			class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-			bind:value={datos_adicionales.costo_despacho} />
-		<input
-			type="number"
-			placeholder="Costo de Instalación"
-			class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-			bind:value={datos_adicionales.costo_instalacion} />
-		<div class="flex gap-3 items-center">
+	<div
+		class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+		<div>
+			<h2 class="text-lg font-bold text-slate-900">Costos y margen</h2>
+			<p class="mt-1 text-sm text-slate-600">
+				Agrega cargos adicionales y define el margen global.
+			</p>
+		</div>
+		<div>
+			<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="costo-despacho"
+				>Despacho (CLP)</label>
 			<input
 				type="number"
-				placeholder="Ganancia Global (%)"
-				class="px-2 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-				bind:value={datos_adicionales.ganancia_global} />
+				id="costo-despacho"
+				min="0"
+				placeholder="Ej: 15000"
+				class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+				bind:value={datos_adicionales.costo_despacho} />
+		</div>
+		<div>
+			<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="costo-instalacion"
+				>Instalación (CLP)</label>
+			<input
+				type="number"
+				id="costo-instalacion"
+				min="0"
+				placeholder="Ej: 25000"
+				class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+				bind:value={datos_adicionales.costo_instalacion} />
+		</div>
+		<div>
+			<label class="mb-1.5 block text-sm font-semibold text-slate-700" for="ganancia-global"
+				>Margen global (%)</label>
+			<input
+				type="number"
+				id="ganancia-global"
+				min="0"
+				placeholder="Ej: 15"
+				class="min-h-11 w-full rounded-lg border border-slate-300 px-3 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20"
+				bind:value={datos_adicionales.ganancia_global}
+				onchange={() => onAplicarGananciaGlobal(Number(datos_adicionales.ganancia_global))} />
 		</div>
 	</div>
 </div>

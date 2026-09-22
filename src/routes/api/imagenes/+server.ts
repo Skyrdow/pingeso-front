@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, validateJWT } from '$lib';
+import { requireSession } from '$lib/server/auth';
 import {
 	deleteImagenes,
 	getImagenes,
@@ -10,14 +10,9 @@ import {
 import type { Imagen } from '@prisma/client';
 import type { ImageGroup } from '$lib/types';
 
-export const GET: RequestHandler = async ({ platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const GET: RequestHandler = async ({ platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const imagenesResult = await getImagenes();
 
@@ -51,14 +46,9 @@ export const GET: RequestHandler = async ({ platform, cookies }) => {
 	return json(imagenes);
 };
 
-export const POST: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const POST: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const imagen: Imagen = await request.json<Imagen>();
 
@@ -73,14 +63,9 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 	return json({ message: 'Imagenes creadas correctamente.' });
 };
 
-export const DELETE: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const DELETE: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id_imagen } = await request.json<{ id_imagen: number }>();
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import type { Usuario } from '@prisma/client';
 
 	let correo: string = $state('');
@@ -20,11 +19,9 @@
 		mensaje = '';
 
 		const usuario: Usuario = { email: correo, id_usuario: 0, is_admin: 0, password: contraseña };
-		const resp = await fetch('/api/register', {
+		await fetch('/api/register', {
 			method: 'POST',
 			body: JSON.stringify(usuario)
-		}).then(async (resp) => {
-			return await resp.json();
 		});
 	}
 </script>

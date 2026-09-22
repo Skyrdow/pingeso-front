@@ -1,17 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, validateJWT } from '$lib';
+import { requireSession } from '$lib/server/auth';
 import { getAllTipos, updateTipo, deleteTipo } from '$lib/repositories/tipo';
 import type { Tipo } from '@prisma/client';
 
-export const GET: RequestHandler = async ({ platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const GET: RequestHandler = async ({ platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const tipos = await getAllTipos();
 	if (tipos.isErr()) {
@@ -21,14 +16,9 @@ export const GET: RequestHandler = async ({ platform, cookies }) => {
 	return json(tipos.value);
 };
 
-export const PUT: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const PUT: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id, tipo } = await request.json<{ id: number; tipo: Tipo }>();
 
@@ -41,14 +31,9 @@ export const PUT: RequestHandler = async ({ request, platform, cookies }) => {
 	return json({ message: 'Tipo actualizado correctamente.' });
 };
 
-export const DELETE: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const DELETE: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id_tipo } = await request.json<{ id_tipo: number }>();
 
