@@ -4,7 +4,7 @@ SvelteKit fullstack (frontend Y backend) para cotizadores de ventanas, desplegad
 
 ## Comandos (usa **bun** — no hay npm; node sí, ver gotchas)
 
-- `bun install` — tras actualizar dependencias: `bunx prisma generate` (el cliente NO está en repo; sin generate nada compila)
+- `bun install` — tras actualizar dependencias: `bunx prisma generate` (el cliente NO está en repo). El script `build` ejecuta sync y generate explícitamente, porque algunos entornos CI bloquean scripts `postinstall`.
 - Verificación: `bun run format` → `bun run lint` → `bun run check` → `bun run build`
 - Dev local con DB: `bun run devw` (= `vite build` con adapter-cloudflare + `wrangler pages dev .svelte-kit/cloudflare`)
 - Dev sólo UI: `bun run dev` (sin DB, ver gotchas)
@@ -22,7 +22,7 @@ SvelteKit fullstack (frontend Y backend) para cotizadores de ventanas, desplegad
 ## Gotchas de entorno (verificados)
 
 - **wrangler debe correr bajo Node, nunca bajo bun**: con wrangler bajo runtime de bun, workerd acepta el socket pero **ninguna petición responde** (ni estática). Node está en `~/.local/node/bin` + symlink en `~/.bun/bin` (siempre en PATH); `bun run`/`bunx` respetan el shebang `env node`. No borrar esos enlaces.
-- **`JWT_SECRET` es obligatorio**: `$env/static/private` (`src/lib/index.ts`, `api/login`) — sin él build/dev fallan con `"JWT_SECRET" is not exported`. Vive en `.env` (gitignored, no hay `.env.example` ni lo documenta el README).
+- **`JWT_SECRET` es obligatorio en runtime**: `src/lib/index.ts` lo lee de `$env/dynamic/private` al validar o firmar JWT. No se necesita durante la compilación. Para `bun run dev`, mantenerlo en `.env`; Wrangler (`devw`/Pages dev) lee bindings locales desde `.dev.vars`. En Cloudflare Pages configurarlo como secret de Runtime para los entornos Production y Preview que correspondan. `.dev.vars*` está gitignored.
 - **`bun run dev` no tiene DB**: `platform` es `undefined` → `getDB()` retorna `err` → todo `/api/*` responde 400 `falló la conexión con la db`. Con `devw` (wrangler) sí funciona — todo el flujo de auth/DB probarlo con `devw`.
 - `bun run lint`, `bun run check`, `bun run build` y `bun run test` pasan actualmente. `lint` = `prettier --check . && eslint .`; usa `bun run format` para corregir formato.
 - No hay CI ni pre-commit (no existe `.github/`).
