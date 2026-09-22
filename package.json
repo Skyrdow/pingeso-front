@@ -5,14 +5,14 @@
 	"scripts": {
 		"dev": "vite dev",
 		"devw": "vite build && wrangler pages dev .svelte-kit/cloudflare",
-		"build": "vite build",
+		"build": "svelte-kit sync && prisma generate && vite build",
 		"preview": "vite preview",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
-		"test": "npm run test:unit -- --run"
+		"test": "bun run test:unit -- --run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241106.0",

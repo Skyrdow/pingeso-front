@@ -10,8 +10,6 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 		throw new Error('No se encontró el tipo de ventana');
 	}
 
-	console.log(tipo);
-
 	const material = await getMaterialById(tipo.id_material);
 
 	let costoTotal = 0;
@@ -46,7 +44,7 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 
 			try {
 				dimension_perfil = evalFormula(formulaDim, parametrosDim);
-			} catch (error) {
+			} catch {
 				throw new Error(
 					`Error al calcular la dimensión para el perfil con código ${perfil.codigo_per}`
 				);
@@ -62,7 +60,7 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 
 			try {
 				cantidad_perfil = evalFormula(formulaCant, parametrosCant);
-			} catch (error) {
+			} catch {
 				throw new Error(
 					`Error al calcular la cantidad para el perfil con código ${perfil.codigo_per}`
 				);
@@ -91,9 +89,9 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 
 			try {
 				cantidad_quincalleria = evalFormula(formulaCant, parametrosCant);
-			} catch (error) {
+			} catch {
 				throw new Error(
-					'Error al calcular la cantidad para la quincallería con código ${quincalleria.id}: ${error.message}'
+					`Error al calcular la cantidad para la quincallería con código ${quincalleria.id_quincalleria}`
 				);
 			}
 
@@ -133,9 +131,9 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 
 			try {
 				dimension_perfil = evalFormula(formulaDim, parametrosDim);
-			} catch (error) {
+			} catch {
 				throw new Error(
-					'Error al calcular la dimensión para el perfil con código ${perfil.codigo}: ${error.message}'
+					`Error al calcular la dimensión para el perfil con código ${perfil.codigo_per}`
 				);
 			}
 
@@ -149,9 +147,9 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 
 			try {
 				cantidad_perfil = evalFormula(formulaCant, parametrosCant);
-			} catch (error) {
+			} catch {
 				throw new Error(
-					'Error al calcular la cantidad para el perfil con código ${perfil.codigo}: ${error.message}'
+					`Error al calcular la cantidad para el perfil con código ${perfil.codigo_per}`
 				);
 			}
 
@@ -163,8 +161,6 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 		const costoQuincalleria = (porcentajeQuinc / 100) * totalPerfiles;
 
 		costoTotal += costoQuincalleria;
-
-		console.log(costoQuincalleria);
 
 		const cantidadCristal = evalFormula(tipo.cantidad_cristal, { Z: ventana.cantidad });
 		const anchoCristal = evalFormula(tipo.formula_ancho, { X: ventana.ancho });
@@ -187,11 +183,5 @@ export async function calcularCostoVentana(ventana: VentanaModel) {
 }
 
 function evalFormula(formula: string, parametros: Record<string, number>) {
-	let formulaEvaluada = formula;
-	for (const [variable, valor] of Object.entries(parametros)) {
-		const regex = new RegExp(`\\b${variable}\\b`, 'g');
-		formulaEvaluada = formulaEvaluada.replace(regex, valor.toString());
-	}
-
-	return evaluate(formulaEvaluada);
+	return evaluate(formula, parametros);
 }

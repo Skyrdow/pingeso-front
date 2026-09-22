@@ -3,11 +3,8 @@ import type { RequestHandler } from './$types';
 import { json } from '@sveltejs/kit';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
-import { JWT_SECRET } from '$env/static/private';
 import { getUsuario } from '$lib/repositories/usuarios';
-import { getDB } from '$lib';
-
-const TOKEN_SECRET = new TextEncoder().encode(JWT_SECRET);
+import { getDB, getJWTSecret } from '$lib';
 
 export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 	const connResult = getDB(platform);
@@ -15,14 +12,11 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 
 	const { email, password } = await request.json<{ email: string; password: string }>();
 
-	console.log(email, password);
-
 	const getResult = await getUsuario(email);
 
 	if (getResult.isErr()) return json({ error: getResult.error }, { status: 404 });
 
 	const user = getResult.value;
-	console.log(user);
 
 	const isPasswordValid = await bcrypt.compare(password, user.password);
 	if (!isPasswordValid) {
@@ -36,7 +30,7 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 	})
 		.setProtectedHeader({ alg: 'HS256' })
 		.setExpirationTime('1h')
-		.sign(TOKEN_SECRET);
+		.sign(getJWTSecret());
 
 	const exp = new Date();
 	exp.setHours(exp.getHours() + 1);

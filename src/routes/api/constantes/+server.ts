@@ -1,17 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, validateJWT } from '$lib';
+import { requireSession } from '$lib/server/auth';
 import { getAllConstantes, saveConstantes } from '$lib/repositories/constantes';
 import type { Constantes } from '@prisma/client';
 
-export const GET: RequestHandler = async ({ platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const GET: RequestHandler = async ({ platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const constantes = await getAllConstantes();
 
@@ -26,14 +21,9 @@ export const GET: RequestHandler = async ({ platform, cookies }) => {
 	});
 };
 
-export const PUT: RequestHandler = async ({ platform, cookies, request }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const PUT: RequestHandler = async ({ platform, cookies, request, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const constantes: Constantes = await request.json<Constantes>();
 	const result = await saveConstantes(constantes);

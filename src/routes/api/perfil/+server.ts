@@ -1,18 +1,13 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getDB, validateJWT } from '$lib';
+import { requireSession } from '$lib/server/auth';
 import { getAllPerfiles, savePerfil, updatePerfil, deletePerfil } from '$lib/repositories/perfil';
 import type { Perfil } from '@prisma/client';
 
 // GET - Obtener todos los perfiles
-export const GET: RequestHandler = async ({ platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const GET: RequestHandler = async ({ platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const perfiles = await getAllPerfiles();
 	if (perfiles.isErr()) {
@@ -23,14 +18,9 @@ export const GET: RequestHandler = async ({ platform, cookies }) => {
 };
 
 // POST - Crear nuevo perfil
-export const POST: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const POST: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { perfilData }: { perfilData: Perfil } = await request.json();
 	const result = await savePerfil(perfilData);
@@ -43,14 +33,9 @@ export const POST: RequestHandler = async ({ request, platform, cookies }) => {
 };
 
 // PUT - Actualizar perfil existente
-export const PUT: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const PUT: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id, perfilData } = await request.json<{ id: number; perfilData: Perfil }>();
 
@@ -64,14 +49,9 @@ export const PUT: RequestHandler = async ({ request, platform, cookies }) => {
 };
 
 // DELETE - Eliminar perfil
-export const DELETE: RequestHandler = async ({ request, platform, cookies }) => {
-	const connection = getDB(platform);
-	if (connection.isErr()) return json({ error: connection.error }, { status: 400 });
-
-	const token = cookies.get('authToken');
-	if (!token) return json({ error: 'Token no proporcionado.' }, { status: 401 });
-	const validationResult = await validateJWT(token);
-	if (validationResult.isErr()) return json({ error: 'Token inválido.' }, { status: 401 });
+export const DELETE: RequestHandler = async ({ request, platform, cookies, locals }) => {
+	const session = requireSession(platform, cookies, locals.session);
+	if (session instanceof Response) return session;
 
 	const { id_perfil } = await request.json<{ id_perfil: number }>();
 

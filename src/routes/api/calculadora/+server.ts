@@ -2,9 +2,9 @@ import type { RequestHandler } from './$types';
 import { getDB } from '$lib';
 import { json } from '@sveltejs/kit';
 import { calcularCostoVentana } from '$lib/services/calculadora';
-import type { VentanaModel, VentanaUI } from '$lib/types';
+import type { VentanaModel } from '$lib/types';
 
-export const POST: RequestHandler = async ({ request, platform, cookies }) => {
+export const POST: RequestHandler = async ({ request, platform }) => {
 	const connResult = getDB(platform);
 	if (connResult.isErr()) {
 		return json({ error: connResult.error }, { status: 400 });

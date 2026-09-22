@@ -472,8 +472,7 @@ export const generatePDF = async (
 	});
 	//#region guardarPDF
 	const pdfBytes = await pdfDoc.save();
-	const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+	const blob = new Blob([pdfBytes.slice().buffer as ArrayBuffer], { type: 'application/pdf' });
 	const url = URL.createObjectURL(blob);
-	console.log('done');
 	return url;
 };
