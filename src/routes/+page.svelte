@@ -5,11 +5,10 @@
 	let error = $state('');
 	let enviando = $state(false);
 
-	async function handleSubmit(event: Event) {
-		event.preventDefault();
+	async function login(email: string, password: string) {
 		error = '';
 
-		if (!usuario || !password) {
+		if (!email || !password) {
 			error = 'Por favor, complete todos los campos.';
 			return;
 		}
@@ -19,7 +18,7 @@
 			const response = await fetch('/api/login', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email: usuario, password })
+				body: JSON.stringify({ email, password })
 			});
 
 			if (!response.ok) {
@@ -36,6 +35,17 @@
 		} finally {
 			enviando = false;
 		}
+	}
+
+	async function handleSubmit(event: Event) {
+		event.preventDefault();
+		await login(usuario, password);
+	}
+
+	async function handleDemoLogin() {
+		usuario = 'demo@demo.test';
+		password = 'demo';
+		await login('demo@demo.test', 'demo');
 	}
 </script>
 
@@ -59,10 +69,12 @@
 		</a>
 
 		<section class="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-			<p class="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Acceso interno</p>
+			<p class="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">
+				Cotizador de ventanas
+			</p>
 			<h1 class="mt-2 text-2xl font-semibold tracking-tight text-slate-950">Iniciar sesión</h1>
 			<p class="mt-2 text-sm leading-6 text-slate-600">
-				Ingresa para crear y administrar presupuestos.
+				Ingresa con tu cuenta o explora la herramienta con la cuenta de demostración.
 			</p>
 
 			<form class="mt-7 space-y-5" onsubmit={handleSubmit}>
@@ -103,6 +115,14 @@
 						></span
 						>{/if}
 					{enviando ? 'Ingresando…' : 'Ingresar'}
+				</button>
+				<button
+					type="button"
+					disabled={enviando}
+					onclick={handleDemoLogin}
+					class="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-teal-800 px-4 font-bold text-teal-900 transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70">
+					<span class="iconify mdi--play-circle-outline size-5" aria-hidden="true"></span>
+					Entrar con cuenta demo
 				</button>
 			</form>
 		</section>
