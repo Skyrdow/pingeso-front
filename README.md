@@ -52,6 +52,16 @@ Este comando compilará el proyecto y ejecutará el proyecto en un entorno más 
 npm run devw
 ```
 
+#### Desplegar en Cloudflare Pages
+
+Configura Cloudflare Pages con estos valores:
+
+- **Build command:** `npm run build`
+- **Build output directory:** `.svelte-kit/cloudflare`
+- **Deploy command (si Cloudflare lo solicita):** `npm run deploy`
+
+`npx wrangler deploy` es para Workers con un entrypoint `main`; no corresponde a esta salida de Pages. Si Pages publica automáticamente el directorio de salida, deja el campo de deploy vacío.
+
 ## Tecnologías usadas
 
 ### SvelteKit
