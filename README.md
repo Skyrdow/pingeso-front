@@ -60,6 +60,8 @@ Configura Cloudflare Pages con estos valores:
 - **Build output directory:** `.svelte-kit/cloudflare`
 - **Deploy command (si Cloudflare lo solicita):** `npm run deploy`
 
+El comando apunta al proyecto Pages `pingeso-front` mediante `--project-name`.
+
 `npx wrangler deploy` es para Workers con un entrypoint `main`; no corresponde a esta salida de Pages. Si Pages publica automáticamente el directorio de salida, deja el campo de deploy vacío.
 
 ## Tecnologías usadas
