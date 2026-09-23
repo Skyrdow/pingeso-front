@@ -19,6 +19,17 @@
 
 	let { data }: Props = $props();
 	const initialData = untrack(() => data);
+	const dialogBackdropClass =
+		'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4';
+	const dialogPanelClass =
+		'relative max-h-[calc(100dvh_-_2rem)] w-full overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl sm:p-6';
+	const dialogLabelClass = 'mb-1 block text-sm font-medium text-slate-700';
+	const dialogInputClass =
+		'w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20';
+	const dialogCancelClass =
+		'rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700';
+	const dialogSaveClass =
+		'rounded-lg bg-teal-800 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2';
 
 	let constantSelected = $state('Materiales');
 
@@ -140,7 +151,7 @@
 
 	function openEditMaterialModal(material: Material) {
 		editMaterialModal = true;
-		materialSelected = material;
+		materialSelected = { ...material };
 	}
 
 	function closeEditMaterialModal() {
@@ -149,7 +160,7 @@
 
 	function openEditTipoModal(tipo: Tipo) {
 		editTipoModal = true;
-		tipoSelected = tipo;
+		tipoSelected = { ...tipo };
 	}
 
 	function closeEditTipoModal() {
@@ -158,7 +169,7 @@
 
 	function openEditCristalModal(cristal: Cristal) {
 		editCristalModal = true;
-		cristalSelected = cristal;
+		cristalSelected = { ...cristal };
 	}
 
 	function closeEditCristalModal() {
@@ -183,7 +194,7 @@
 
 	function openEditColorModal(color: Color) {
 		editColorModal = true;
-		colorSelected = color;
+		colorSelected = { ...color };
 	}
 
 	function closeEditColorModal() {
@@ -211,7 +222,7 @@
 
 	function openEditPerfilModal(perfil: Perfil) {
 		editPerfilModal = true;
-		perfilSelected = perfil;
+		perfilSelected = { ...perfil };
 	}
 
 	function closeEditPerfilModal() {
@@ -220,7 +231,7 @@
 
 	function openEditQuincalleriaModal(quincalleria: Quincalleria) {
 		editQuincalleriaModal = true;
-		quincalleriaSelected = quincalleria;
+		quincalleriaSelected = { ...quincalleria };
 	}
 
 	function closeEditQuincalleriaModal() {
@@ -247,6 +258,9 @@
 				return response.json();
 			})
 			.then(() => {
+				materiales = materiales.map((item) =>
+					item.id_material === materialSelected.id_material ? materialSelected : item
+				);
 				editMaterialModal = false;
 				successModal = true;
 			})
@@ -275,6 +289,7 @@
 				return response.json();
 			})
 			.then(() => {
+				tipos = tipos.map((item) => (item.id_tipo === tipoSelected.id_tipo ? tipoSelected : item));
 				editTipoModal = false;
 				successModal = true;
 			})
@@ -303,6 +318,9 @@
 				return response.json();
 			})
 			.then(() => {
+				cristales = cristales.map((item) =>
+					item.id_cristal === cristalSelected.id_cristal ? cristalSelected : item
+				);
 				editCristalModal = false;
 				successModal = true;
 			})
@@ -367,6 +385,9 @@
 				return response.json();
 			})
 			.then(() => {
+				colores = colores.map((item) =>
+					item.id_color === colorSelected.id_color ? colorSelected : item
+				);
 				editColorModal = false;
 				successModal = true;
 			})
@@ -426,6 +447,9 @@
 				return response.json();
 			})
 			.then(() => {
+				perfiles = perfiles.map((item) =>
+					item.id_perfil === perfilSelected.id_perfil ? perfilSelected : item
+				);
 				editPerfilModal = false;
 				successModal = true;
 			})
@@ -454,6 +478,11 @@
 				return response.json();
 			})
 			.then(() => {
+				quincallerias = quincallerias.map((item) =>
+					item.id_quincalleria === quincalleriaSelected.id_quincalleria
+						? quincalleriaSelected
+						: item
+				);
 				editQuincalleriaModal = false;
 				successModal = true;
 			})
@@ -684,72 +713,67 @@
 
 	<!--editMaterial Modal-->
 	{#if editMaterialModal}
-		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
-				<!-- Botón de cierre -->
-				<div class="flex justify-end">
+		<div class={dialogBackdropClass}>
+			<section
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="edit-material-title"
+				class={`${dialogPanelClass} max-w-xl`}>
+				<header class="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Material · ID {materialSelected.id_material}
+						</p>
+						<h2 id="edit-material-title" class="mt-1 text-xl font-bold text-slate-950">
+							Modificar material
+						</h2>
+					</div>
 					<button
+						type="button"
 						onclick={closeEditMaterialModal}
-						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
-						aria-label="X">
+						class="iconify mdi--close size-5 rounded-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+						aria-label="Cerrar edición de material">
 					</button>
-				</div>
-				<p class="w-full text-xl text-center font-bold">Modificar Material</p>
+				</header>
 
-				<!-- Contenedor para la tabla con scroll horizontal -->
-				<div class="overflow-x-auto mt-4">
-					<table class="table-fixed w-full border-collapse border border-gray-300">
-						<thead class="bg-gray-200 text-gray-700 w-full">
-							<tr>
-								<th class="px-1 py-2 border w-16">ID</th>
-								<th class="border w-48">Nombre Material</th>
-								<th class="border w-32">Texto libre PDF</th>
-								<th class="border w-32">Texto 1</th>
-								<th class="border w-32">Texto 2</th>
-							</tr>
-						</thead>
-						<tbody class="w-full">
-							<tr>
-								<td class="border px-1 py-2">{materialSelected.id_material}</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={materialSelected.nombre_material}
-										placeholder="Nombre del material"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={materialSelected.texto_libre}
-										placeholder="Texto libre PDF"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={materialSelected.texto_calidad}
-										placeholder="Texto 1"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={materialSelected.texto_termopanel}
-										placeholder="Texto 2"
-										class="w-full" />
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-				<!-- Botón para guardar cambios -->
-				<button
-					onclick={editMaterial}
-					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
-					Guardar cambios
-				</button>
-			</div>
+				<form
+					class="grid gap-4 sm:grid-cols-2"
+					onsubmit={(event) => {
+						event.preventDefault();
+						editMaterial();
+					}}>
+					<label class="sm:col-span-2">
+						<span class={dialogLabelClass}>Nombre del material</span>
+						<input
+							class={dialogInputClass}
+							type="text"
+							bind:value={materialSelected.nombre_material} />
+					</label>
+					<label class="sm:col-span-2">
+						<span class={dialogLabelClass}>Texto libre para el PDF</span>
+						<input class={dialogInputClass} type="text" bind:value={materialSelected.texto_libre} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Texto de calidad</span>
+						<input
+							class={dialogInputClass}
+							type="text"
+							bind:value={materialSelected.texto_calidad} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Texto de termopanel</span>
+						<input
+							class={dialogInputClass}
+							type="text"
+							bind:value={materialSelected.texto_termopanel} />
+					</label>
+					<footer class="mt-2 flex justify-end gap-3 border-t border-slate-200 pt-4 sm:col-span-2">
+						<button type="button" class={dialogCancelClass} onclick={closeEditMaterialModal}
+							>Cancelar</button>
+						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
+					</footer>
+				</form>
+			</section>
 		</div>
 	{/if}
 
@@ -786,57 +810,53 @@
 
 	<!-- editCristal Modal -->
 	{#if editCristalModal}
-		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
-				<!-- Close button -->
-				<div class="flex justify-end">
+		<div class={dialogBackdropClass}>
+			<section
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="edit-cristal-title"
+				class={`${dialogPanelClass} max-w-xl`}>
+				<header class="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Cristal · ID {cristalSelected.id_cristal}
+						</p>
+						<h2 id="edit-cristal-title" class="mt-1 text-xl font-bold text-slate-950">
+							Modificar cristal
+						</h2>
+					</div>
 					<button
+						type="button"
 						onclick={closeEditCristalModal}
-						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
-						aria-label="X">
+						class="iconify mdi--close size-5 rounded-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+						aria-label="Cerrar edición de cristal">
 					</button>
-				</div>
+				</header>
 
-				<p class="w-full text-xl text-center font-bold">Modificar Cristal</p>
-
-				<!-- Contenedor para la tabla con scroll horizontal -->
-				<div class="overflow-x-auto mt-4">
-					<table class="table-fixed w-full border-collapse border border-gray-300">
-						<thead class="bg-gray-200 text-gray-700 w-full">
-							<tr>
-								<th class="px-1 py-2 border w-16">ID</th>
-								<th class="border w-48">Descripción Cristal</th>
-								<th class="border w-32">Precio</th>
-							</tr>
-						</thead>
-						<tbody class="w-full">
-							<tr>
-								<td class="border px-1 py-2">{cristalSelected.id_cristal}</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={cristalSelected.desc_cristal}
-										placeholder="Descripción cristal"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={cristalSelected.precio_cristal}
-										placeholder="Precio"
-										class="w-full" />
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-				<!-- Botón para guardar cambios -->
-				<button
-					onclick={editCristal}
-					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
-					Guardar cambios
-				</button>
-			</div>
+				<form
+					class="grid gap-4 sm:grid-cols-2"
+					onsubmit={(event) => {
+						event.preventDefault();
+						editCristal();
+					}}>
+					<label class="sm:col-span-2">
+						<span class={dialogLabelClass}>Descripción del cristal</span>
+						<input class={dialogInputClass} type="text" bind:value={cristalSelected.desc_cristal} />
+					</label>
+					<label class="sm:col-span-2">
+						<span class={dialogLabelClass}>Precio</span>
+						<input
+							class={dialogInputClass}
+							type="number"
+							bind:value={cristalSelected.precio_cristal} />
+					</label>
+					<footer class="mt-2 flex justify-end gap-3 border-t border-slate-200 pt-4 sm:col-span-2">
+						<button type="button" class={dialogCancelClass} onclick={closeEditCristalModal}
+							>Cancelar</button>
+						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
+					</footer>
+				</form>
+			</section>
 		</div>
 	{/if}
 
@@ -937,110 +957,81 @@
 
 	<!-- editTipo Modal -->
 	{#if editTipoModal}
-		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
-				<!-- Botón de cierre -->
-				<div class="flex justify-end">
+		<div class={dialogBackdropClass}>
+			<section
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="edit-tipo-title"
+				class={`${dialogPanelClass} max-w-3xl`}>
+				<header class="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+					<div class="min-w-0">
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Tipo · ID {tipoSelected.id_tipo} · Material {tipoSelected.id_material}
+						</p>
+						<h2 id="edit-tipo-title" class="mt-1 text-xl font-bold text-slate-950">
+							{tipoSelected.descripcion_tipo}
+						</h2>
+					</div>
 					<button
+						type="button"
 						onclick={closeEditTipoModal}
-						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
-						aria-label="X">
+						class="iconify mdi--close size-5 shrink-0 rounded-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+						aria-label="Cerrar edición de tipo">
 					</button>
-				</div>
+				</header>
 
-				<p class="w-full text-xl text-center font-bold">Modificar Tipo</p>
-
-				<!-- Contenedor para la tabla con scroll horizontal -->
-				<div class="overflow-x-auto mt-4">
-					<table class="table-fixed w-full border-collapse border border-gray-300">
-						<thead class="bg-gray-200 text-gray-700 w-full">
-							<tr>
-								<th class="px-1 py-2 border w-16">ID</th>
-								<th class="border w-32">Descripción</th>
-								<th class="border w-32">Material</th>
-								<th class="border w-32">Ancho</th>
-								<th class="border w-32">Alto</th>
-								<th class="border min-w-28 w-28">Cant. cristal</th>
-								<th class="border w-20">% Quincallería</th>
-								<th class="border w-24">Largo perfil</th>
-								<th class="border w-32">Mínimo</th>
-								<th class="border w-32">Máximo</th>
-								<th class="border w-32">Ganancia</th>
-							</tr>
-						</thead>
-						<tbody class="w-full">
-							<tr>
-								<td class="border px-1 py-2">{tipoSelected.id_tipo}</td>
-								<td class="border line-clamp-0">{tipoSelected.descripcion_tipo}</td>
-								<td class="border">{tipoSelected.id_material}</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={tipoSelected.formula_ancho}
-										placeholder="Fórmula ancho"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={tipoSelected.formula_alto}
-										placeholder="Fórmula alto"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={tipoSelected.cantidad_cristal}
-										placeholder="Cantidad cristal"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={tipoSelected.porcentaje_quinc}
-										placeholder="% Quincallería"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={tipoSelected.largo_perfil}
-										placeholder="Largo perfil"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={tipoSelected.minimo}
-										placeholder="Mínimo"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={tipoSelected.maximo}
-										placeholder="Máximo"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={tipoSelected.ganancia}
-										placeholder="Ganancia"
-										class="w-full" />
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<!-- Botón para guardar cambios -->
-				<button
-					onclick={editTipo}
-					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
-					Guardar cambios
-				</button>
-			</div>
+				<form
+					class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+					onsubmit={(event) => {
+						event.preventDefault();
+						editTipo();
+					}}>
+					<label>
+						<span class={dialogLabelClass}>Fórmula de ancho</span>
+						<input class={dialogInputClass} type="text" bind:value={tipoSelected.formula_ancho} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Fórmula de alto</span>
+						<input class={dialogInputClass} type="text" bind:value={tipoSelected.formula_alto} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Cantidad de cristales</span>
+						<input
+							class={dialogInputClass}
+							type="text"
+							bind:value={tipoSelected.cantidad_cristal} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Porcentaje de quincallería</span>
+						<input
+							class={dialogInputClass}
+							type="number"
+							bind:value={tipoSelected.porcentaje_quinc} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Largo de perfil</span>
+						<input class={dialogInputClass} type="number" bind:value={tipoSelected.largo_perfil} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Mínimo</span>
+						<input class={dialogInputClass} type="number" bind:value={tipoSelected.minimo} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Máximo</span>
+						<input class={dialogInputClass} type="number" bind:value={tipoSelected.maximo} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Ganancia</span>
+						<input class={dialogInputClass} type="number" bind:value={tipoSelected.ganancia} />
+					</label>
+					<footer
+						class="mt-2 flex justify-end gap-3 border-t border-slate-200 pt-4 sm:col-span-2 lg:col-span-3">
+						<button type="button" class={dialogCancelClass} onclick={closeEditTipoModal}
+							>Cancelar</button>
+						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
+					</footer>
+				</form>
+			</section>
 		</div>
 	{/if}
 
@@ -1106,50 +1097,46 @@
 
 	<!-- editColor Modal -->
 	{#if editColorModal}
-		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
-				<!-- Close button -->
-				<div class="flex justify-end">
+		<div class={dialogBackdropClass}>
+			<section
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="edit-color-title"
+				class={`${dialogPanelClass} max-w-md`}>
+				<header class="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Color · ID {colorSelected.id_color}
+						</p>
+						<h2 id="edit-color-title" class="mt-1 text-xl font-bold text-slate-950">
+							Modificar color
+						</h2>
+					</div>
 					<button
+						type="button"
 						onclick={closeEditColorModal}
-						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
-						aria-label="X">
+						class="iconify mdi--close size-5 rounded-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+						aria-label="Cerrar edición de color">
 					</button>
-				</div>
+				</header>
 
-				<p class="w-full text-xl text-center font-bold">Modificar Color</p>
-
-				<!-- Table container with horizontal scroll -->
-				<div class="overflow-x-auto mt-4">
-					<table class="table-fixed w-full border-collapse border border-gray-300">
-						<thead class="bg-gray-200 text-gray-700 w-full">
-							<tr>
-								<th class="px-1 py-2 border w-16">ID</th>
-								<th class="border w-48">Nombre Color</th>
-							</tr>
-						</thead>
-						<tbody class="w-full">
-							<tr>
-								<td class="border px-1 py-2">{colorSelected.id_color}</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={colorSelected.nombre_color}
-										placeholder="Nombre del color"
-										class="w-full" />
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<!-- Save changes button -->
-				<button
-					onclick={editColor}
-					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
-					Guardar cambios
-				</button>
-			</div>
+				<form
+					class="space-y-4"
+					onsubmit={(event) => {
+						event.preventDefault();
+						editColor();
+					}}>
+					<label class="block">
+						<span class={dialogLabelClass}>Nombre del color</span>
+						<input class={dialogInputClass} type="text" bind:value={colorSelected.nombre_color} />
+					</label>
+					<footer class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+						<button type="button" class={dialogCancelClass} onclick={closeEditColorModal}
+							>Cancelar</button>
+						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
+					</footer>
+				</form>
+			</section>
 		</div>
 	{/if}
 
@@ -1334,76 +1321,58 @@
 
 	<!-- editPerfil Modal -->
 	{#if editPerfilModal}
-		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
-				<!-- Close button -->
-				<div class="flex justify-end">
+		<div class={dialogBackdropClass}>
+			<section
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="edit-perfil-title"
+				class={`${dialogPanelClass} max-w-xl`}>
+				<header class="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Perfil · Código {perfilSelected.codigo_per} · ID {perfilSelected.id_perfil}
+						</p>
+						<h2 id="edit-perfil-title" class="mt-1 text-xl font-bold text-slate-950">
+							Modificar perfil
+						</h2>
+					</div>
 					<button
+						type="button"
 						onclick={closeEditPerfilModal}
-						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
-						aria-label="X">
+						class="iconify mdi--close size-5 rounded-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+						aria-label="Cerrar edición de perfil">
 					</button>
-				</div>
+				</header>
 
-				<p class="w-full text-xl text-center font-bold">Modificar Perfil</p>
-
-				<!-- Table container with horizontal scroll -->
-				<div class="overflow-x-auto mt-4">
-					<table class="table-fixed w-full border-collapse border border-gray-300">
-						<thead class="bg-gray-200 text-gray-700 w-full">
-							<tr>
-								<th class="px-1 py-2 border w-16">ID</th>
-								<th class="border w-48">Código Perfil</th>
-								<th class="border w-48">Dimensiones</th>
-								<th class="border w-48">Cantidad</th>
-								<th class="border w-48">Kg/ml</th>
-								<th class="border w-48">Precio</th>
-							</tr>
-						</thead>
-						<tbody class="w-full">
-							<tr>
-								<td class="border px-1 py-2">{perfilSelected.id_perfil}</td>
-								<td class="border px-1 py-2">{perfilSelected.codigo_per}</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={perfilSelected.formula_dim}
-										placeholder="Dimesiones"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={perfilSelected.formula_cant}
-										placeholder="Cantidad"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={perfilSelected.kg_ml_per}
-										placeholder="Kg/ml"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={perfilSelected.valor}
-										placeholder="Precio"
-										class="w-full" />
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<!-- Save changes button -->
-				<button
-					onclick={editPerfil}
-					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
-					Guardar cambios
-				</button>
-			</div>
+				<form
+					class="grid gap-4 sm:grid-cols-2"
+					onsubmit={(event) => {
+						event.preventDefault();
+						editPerfil();
+					}}>
+					<label>
+						<span class={dialogLabelClass}>Fórmula de dimensión</span>
+						<input class={dialogInputClass} type="text" bind:value={perfilSelected.formula_dim} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Fórmula de cantidad</span>
+						<input class={dialogInputClass} type="text" bind:value={perfilSelected.formula_cant} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Peso (kg/ml)</span>
+						<input class={dialogInputClass} type="number" bind:value={perfilSelected.kg_ml_per} />
+					</label>
+					<label>
+						<span class={dialogLabelClass}>Precio por metro</span>
+						<input class={dialogInputClass} type="number" bind:value={perfilSelected.valor} />
+					</label>
+					<footer class="mt-2 flex justify-end gap-3 border-t border-slate-200 pt-4 sm:col-span-2">
+						<button type="button" class={dialogCancelClass} onclick={closeEditPerfilModal}
+							>Cancelar</button>
+						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
+					</footer>
+				</form>
+			</section>
 		</div>
 	{/if}
 
@@ -1435,66 +1404,64 @@
 		</table>
 	{/if}
 	{#if editQuincalleriaModal}
-		<div class="fixed inset-0 bg-gray-800 bg-opacity-50 flex items-center justify-center z-50">
-			<div class="relative bg-white rounded-lg shadow-xl p-8 w-full max-w-[80%]">
-				<!-- Close button -->
-				<div class="flex justify-end">
+		<div class={dialogBackdropClass}>
+			<section
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="edit-quincalleria-title"
+				class={`${dialogPanelClass} max-w-xl`}>
+				<header class="mb-5 flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+					<div>
+						<p class="text-xs font-semibold uppercase tracking-wide text-slate-500">
+							Quincallería · ID {quincalleriaSelected.id_quincalleria}
+						</p>
+						<h2 id="edit-quincalleria-title" class="mt-1 text-xl font-bold text-slate-950">
+							Modificar quincallería
+						</h2>
+					</div>
 					<button
+						type="button"
 						onclick={closeEditQuincalleriaModal}
-						class="text-gray-500 hover:text-gray-800 font-bold text-lg iconify mdi--close size-6"
-						aria-label="X">
+						class="iconify mdi--close size-5 rounded-md text-slate-500 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700"
+						aria-label="Cerrar edición de quincallería">
 					</button>
-				</div>
+				</header>
 
-				<p class="w-full text-xl text-center font-bold">Modificar Quincallería</p>
-
-				<!-- Table container with horizontal scroll -->
-				<div class="overflow-x-auto mt-4">
-					<table class="table-fixed w-full border-collapse border border-gray-300">
-						<thead class="bg-gray-200 text-gray-700 w-full">
-							<tr>
-								<th class="px-1 py-2 border w-16">ID</th>
-								<th class="border w-48">Descripción</th>
-								<th class="border w-48">Fórmula</th>
-								<th class="border w-48">Precio</th>
-							</tr>
-						</thead>
-						<tbody class="w-full">
-							<tr>
-								<td class="border px-1 py-2">{quincalleriaSelected.id_quincalleria}</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={quincalleriaSelected.desc_quin}
-										placeholder="Descripción"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="text"
-										bind:value={quincalleriaSelected.formula_quin}
-										placeholder="Fórmula"
-										class="w-full" />
-								</td>
-								<td class="border">
-									<input
-										type="number"
-										bind:value={quincalleriaSelected.precio_quin}
-										placeholder="Precio"
-										class="w-full" />
-								</td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-
-				<!-- Save changes button -->
-				<button
-					onclick={editQuincalleria}
-					class="w-full bg-teal-600 text-white font-bold py-2 px-4 rounded hover:bg-teal-500 mt-4">
-					Guardar cambios
-				</button>
-			</div>
+				<form
+					class="space-y-4"
+					onsubmit={(event) => {
+						event.preventDefault();
+						editQuincalleria();
+					}}>
+					<label class="block">
+						<span class={dialogLabelClass}>Descripción</span>
+						<input
+							class={dialogInputClass}
+							type="text"
+							bind:value={quincalleriaSelected.desc_quin} />
+					</label>
+					<label class="block">
+						<span class={dialogLabelClass}>Fórmula</span>
+						<input
+							class={dialogInputClass}
+							type="text"
+							bind:value={quincalleriaSelected.formula_quin} />
+					</label>
+					<label class="block">
+						<span class={dialogLabelClass}>Precio</span>
+						<input
+							class={dialogInputClass}
+							type="number"
+							bind:value={quincalleriaSelected.precio_quin} />
+					</label>
+					<footer class="flex justify-end gap-3 border-t border-slate-200 pt-4">
+						<button type="button" class={dialogCancelClass} onclick={closeEditQuincalleriaModal}>
+							Cancelar
+						</button>
+						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
+					</footer>
+				</form>
+			</section>
 		</div>
 	{/if}
 </main>
