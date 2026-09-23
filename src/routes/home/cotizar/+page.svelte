@@ -1,7 +1,6 @@
 <script lang="ts">
 	import DatosCotizacion from '$lib/components/DatosCotizacion.svelte';
 	import OpcionVentanas from '$lib/components/OpcionVentanas.svelte';
-	import { generatePDF } from '$lib/services/pdf_generator';
 	import { url, presupuesto, editFromHistory } from '$lib/store';
 	import type {
 		ClienteUI,
@@ -284,6 +283,7 @@
 				throw new Error(`Error en la solicitud: ${response.status} ${response.statusText}`);
 			}
 			await response.json();
+			const { generatePDF } = await import('$lib/services/pdf_generator');
 			const urlLocal = await generatePDF(cotizacion, imagenes, data);
 			presupuesto.set(cotizacion);
 			url.set(urlLocal);

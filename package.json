@@ -1,6 +1,7 @@
 {
 	"name": "pingeso-front",
 	"version": "0.0.1",
+	"packageManager": "npm@10.9.2",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -12,7 +13,7 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest",
-		"test": "bun run test:unit -- --run"
+		"test": "vitest run"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241106.0",

@@ -2,7 +2,6 @@
 	import type { PresupuestoModel, OpcionModel } from '$lib/types';
 	import { editFromHistory, presupuesto, url } from '$lib/store';
 	import { goto } from '$app/navigation';
-	import { generatePDF } from '$lib/services/pdf_generator';
 	import { get } from 'svelte/store';
 	import { untrack } from 'svelte';
 	import type { PageData } from './$types';
@@ -249,6 +248,7 @@
 									aria-label="Abrir PDF de {cotizacion.nombre_cliente}"
 									onclick={async () => {
 										presupuesto.set(cotizacion);
+										const { generatePDF } = await import('$lib/services/pdf_generator');
 										const urlLocal = await generatePDF(cotizacion, images, constantData);
 										url.set(urlLocal);
 										window.open(get(url));

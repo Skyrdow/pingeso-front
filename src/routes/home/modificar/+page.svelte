@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { generatePDF } from '$lib/services/pdf_generator';
 	import type { ImageGroup, PresupuestoModel } from '$lib/types';
 	import type {
 		Color,
@@ -21,16 +20,7 @@
 	let { data }: Props = $props();
 	const initialData = untrack(() => data);
 
-	let constantSelected = $state('');
-	let constantes = [
-		'Materiales',
-		'Cristales',
-		'Tipos',
-		'Imágenes',
-		'Colores',
-		'Perfiles',
-		'Quincallerías'
-	];
+	let constantSelected = $state('Materiales');
 
 	let successModal = $state(false);
 	let errorMessage = $state('');
@@ -112,6 +102,19 @@
 	let perfiles: Perfil[] = $state(initialData.perfiles);
 	let quincallerias: Quincalleria[] = $state(initialData.quincallerias);
 	let constantes_pdf: Constantes = $state(initialData.constantes_pdf);
+	const seccionesCatalogo = $derived([
+		{ nombre: 'Materiales', icono: 'mdi--layers-outline', cantidad: materiales.length },
+		{ nombre: 'Cristales', icono: 'mdi--view-agenda-outline', cantidad: cristales.length },
+		{ nombre: 'Tipos', icono: 'mdi--window-open-variant', cantidad: tipos.length },
+		{
+			nombre: 'Imágenes',
+			icono: 'mdi--image-multiple-outline',
+			cantidad: imagenes.reduce((total, grupo) => total + grupo.imagenes.length, 0)
+		},
+		{ nombre: 'Colores', icono: 'mdi--palette-outline', cantidad: colores.length },
+		{ nombre: 'Perfiles', icono: 'mdi--ruler-square', cantidad: perfiles.length },
+		{ nombre: 'Quincallerías', icono: 'mdi--tools', cantidad: quincallerias.length }
+	]);
 
 	let textoIzq = $state(constantes_pdf.texto_izquierda);
 	let margenIzq = $state(constantes_pdf.margen_texto_izquierda ?? 0);
@@ -588,6 +591,7 @@
 			valor_instalacion: 10000,
 			id_presupuesto: 0
 		};
+		const { generatePDF } = await import('$lib/services/pdf_generator');
 		const url = await generatePDF(previewPresupuesto, imagenes, data);
 		window.open(url);
 	}
@@ -629,19 +633,25 @@
 			Mantén actualizados los productos, fórmulas e imágenes del cotizador.
 		</p>
 	</div>
-	<div class="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-		<label for="catalogo" class="mb-1.5 block text-sm font-semibold text-slate-700"
-			>Sección del catálogo</label>
-		<select
-			id="catalogo"
-			bind:value={constantSelected}
-			class="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-slate-800 focus:border-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-700/20">
-			<option selected disabled value="">Selecciona una sección</option>
-			{#each constantes as option}
-				<option>{option}</option>
-			{/each}
-		</select>
-	</div>
+	<nav
+		aria-label="Secciones del catálogo"
+		class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7">
+		{#each seccionesCatalogo as seccion (seccion.nombre)}
+			<button
+				type="button"
+				aria-pressed={constantSelected === seccion.nombre}
+				onclick={() => (constantSelected = seccion.nombre)}
+				class={`flex min-h-14 items-center gap-2 rounded-xl border px-3 text-left text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2 ${constantSelected === seccion.nombre ? 'border-teal-900 bg-teal-900 text-white shadow-sm' : 'border-slate-200 bg-white text-slate-700 hover:border-teal-300 hover:bg-teal-50'}`}>
+				<span
+					class={`iconify ${seccion.icono} size-5 shrink-0 ${constantSelected === seccion.nombre ? 'text-amber-300' : 'text-teal-800'}`}
+					aria-hidden="true"></span>
+				<span class="min-w-0 flex-1 truncate">{seccion.nombre}</span>
+				<span
+					class={`rounded-full px-2 py-0.5 text-xs tabular-nums ${constantSelected === seccion.nombre ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-600'}`}
+					>{seccion.cantidad}</span>
+			</button>
+		{/each}
+	</nav>
 
 	{#if constantSelected == 'Materiales'}
 		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">

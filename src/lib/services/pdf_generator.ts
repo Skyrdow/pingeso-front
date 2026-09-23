@@ -1,478 +1,675 @@
-import type { ConstantData, ImageGroup, OpcionModel, PresupuestoModel } from '$lib/types';
-import type { Color, Cristal, Material, Tipo } from '@prisma/client';
-import {
-	PDFDocument,
-	PageSizes,
-	rgb,
-	layoutMultilineText,
-	TextAlignment,
-	PDFPage,
-	PDFFont,
-	type LayoutTextOptions
-} from 'pdf-lib';
+import type {
+	ConstantData,
+	ImageGroup,
+	OpcionModel,
+	PresupuestoModel,
+	VentanaModel
+} from '$lib/types';
+import { PDFDocument, PageSizes, rgb } from 'pdf-lib';
+import type { PDFFont, PDFPage, RGB } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
-//#region constantes
-let materiales: Material[];
-let colores: Color[];
-let cristales: Cristal[];
-let tipos: Tipo[];
+const PAGE_MARGIN = 38;
+const BOTTOM_MARGIN = 42;
+const LINE_HEIGHT = 12;
 
-let pdfDoc: PDFDocument;
-let page: PDFPage;
+const palette = {
+	ink: rgb(0.12, 0.18, 0.2),
+	muted: rgb(0.38, 0.44, 0.46),
+	petrol: rgb(0.06, 0.31, 0.29),
+	petrolLight: rgb(0.91, 0.96, 0.95),
+	amber: rgb(0.83, 0.6, 0.25),
+	line: rgb(0.85, 0.89, 0.88),
+	row: rgb(0.97, 0.98, 0.98),
+	white: rgb(1, 1, 1)
+};
 
-const fontSize = 9;
-let font: PDFFont;
-let boldFont: PDFFont;
+type Column = { label: string; width: number; align?: 'left' | 'right' };
 
-let height: number;
-let width: number;
+const columns: Column[] = [
+	{ label: 'TIPO', width: 136 },
+	{ label: 'COLOR', width: 52 },
+	{ label: 'CRISTAL', width: 61 },
+	{ label: 'ANCHO', width: 43, align: 'right' },
+	{ label: 'ALTO', width: 43, align: 'right' },
+	{ label: 'CANT.', width: 30, align: 'right' },
+	{ label: 'PRECIO UNIT.', width: 68, align: 'right' },
+	{ label: 'TOTAL', width: 70, align: 'right' }
+];
 
-const marginTop: number = 40;
-const marginLeft: number = 20;
-
-let currentX: number;
-let currentY: number;
-
-const verticalGap: number = 11;
-
-// Dimensiones de las columnas
-const headersTabla = ['TIPO', 'COLOR', 'CRISTAL', 'ANCHO', 'ALTO', 'CANT', 'PRECIO U', 'TOTAL'];
-const columnWidths = [115, -25, 35, -35, -40, -33, -15, -15].map((element, _, arr) => {
-	return element + 550 / arr.length;
-});
-const rowHeight = 13; // Altura de cada fila
-const rowGap = 9;
-const footerText = ['TRANSPORTE', 'INSTALACIÓN', 'TOTAL IVA INCLUIDO'];
-let footerValues: number[] = [];
-//#region funciones
-async function drawImageRow(group: ImageGroup | undefined) {
-	if (group == undefined) return;
-
-	const images = group.imagenes;
-	if (images.length == 0) return;
-	const imgHeight = images[0].height;
-
-	if (currentY - -verticalGap < 0) {
-		page = pdfDoc.addPage(PageSizes.A4);
-		currentY = height - marginTop;
-	}
-
-	// Agregar imágenes programáticamente
-	const imageYPosition = currentY - imgHeight; // Posición vertical del área para imágenes
-	const imageWidth = (width - marginLeft * 2) / images.length - 10; // Espacio horizontal dividido entre imágenes
-	const imageXStart = marginLeft; // Margen inicial a la izquierda
-
-	for (let i = 0; i < images.length; i++) {
-		const bytes = images[i].bytes;
-		const embeddedImage = await pdfDoc.embedPng(bytes);
-		const scaledImage = embeddedImage.scaleToFit(imageWidth, imgHeight);
-
-		const xOffset = imageXStart + i * (imageWidth + 10); // Espacio entre imágenes
-		const xCenterOffset = (imageWidth - scaledImage.width) / 2; // Centrado horizontal
-		const yCenterOffset = (imgHeight - scaledImage.height) / 2; // Centrado vertical
-		page.drawImage(embeddedImage, {
-			x: xOffset + xCenterOffset,
-			y: imageYPosition + yCenterOffset,
-			width: scaledImage.width,
-			height: scaledImage.height
-		});
-	}
-	currentY = imageYPosition - verticalGap;
+function cleanText(value: string | null | undefined) {
+	return (value ?? '').replace(/\\n/g, '\n').replace(/\r\n/g, '\n').trim();
 }
 
-function formatoChileno(valor: number) {
-	const truncado = Math.trunc(valor); // Trunca el número
-	return new Intl.NumberFormat('es-CL', {
-		currency: 'CLP',
-		minimumFractionDigits: 0
-	}).format(truncado);
-}
+function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
+	const lines: string[] = [];
 
-function drawOptionHeaderRow(row: string[], avialable_width: number, fontSize: number) {
-	if (row.length === 0) return;
-
-	const totalTextWidth = row.reduce(
-		(acc, text) => acc + boldFont.widthOfTextAtSize(text, fontSize),
-		0
-	);
-
-	const totalSpacing = avialable_width - totalTextWidth;
-	const extraSpacing = totalSpacing / (row.length - 1);
-
-	for (let index = 0; index < row.length; index++) {
-		const text = row[index];
-
-		page.drawText(text, {
-			x: currentX,
-			y: currentY,
-			size: fontSize,
-			font: boldFont
-		});
-
-		// Avanzar X considerando el tamaño del texto más el espacio extra calculado
-		currentX += boldFont.widthOfTextAtSize(text, fontSize) + extraSpacing;
-	}
-}
-
-function isValidURL(str: string) {
-	const pattern = /^(https?:\/\/)?(www\.)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
-	return pattern.test(str);
-}
-
-function drawMultiLineText(texto_multilinea: string, opciones: LayoutTextOptions) {
-	const multiText = layoutMultilineText(texto_multilinea, opciones);
-	let _currentY = currentY - verticalGap;
-
-	for (let i = 0; i < multiText.lines.length; i++) {
-		const line = multiText.lines[i];
-
-		if (_currentY - line.height < 0) {
-			page = pdfDoc.addPage(PageSizes.A4);
-			currentY = height - marginTop;
-			_currentY = currentY;
+	for (const paragraph of cleanText(text).split('\n')) {
+		if (!paragraph.trim()) {
+			lines.push('');
+			continue;
 		}
 
-		page.drawText(line.text, {
-			x: line.x,
-			y: line.y - height,
-			size: opciones.fontSize,
-			font: opciones.font,
-			color: isValidURL(multiText.lines[i].text) ? rgb(0, 0, 1) : rgb(0, 0, 0) // Azul para el link
-		});
-		// move position down
-		_currentY -= line.height * 1.15;
-	}
-	return _currentY;
-}
-
-//#region tabla
-function drawTable(opcion: OpcionModel, valor_despacho: number, valor_instalacion: number) {
-	const tableFontSize = fontSize - 1;
-
-	currentX = marginLeft;
-
-	// dibujar fondo blanco y borde rojo para header + body
-	page.drawRectangle({
-		x: marginLeft,
-		y: currentY - rowHeight * (opcion.Ventanas.length + 1),
-		width: width - marginLeft * 2,
-		height: rowHeight * (opcion.Ventanas.length + 1),
-		color: rgb(1, 1, 1),
-		borderColor: rgb(1, 0, 0),
-		borderWidth: 0.5
-	});
-
-	// Dibujar encabezados con fondo de color
-	page.drawRectangle({
-		x: marginLeft + 0.5,
-		y: currentY - rowHeight,
-		width: width - 1 - marginLeft * 2,
-		height: rowHeight - 0.5,
-		color: rgb(0, 176 / 255, 240 / 255) // Color de fondo azul claro
-	});
-
-	headersTabla.forEach((header, index) => {
-		const cellX = currentX + 5;
-		const columnWidth = columnWidths[index];
-
-		if (index > headersTabla.length - 6) {
-			const textWidth = font.widthOfTextAtSize(header, tableFontSize);
-			page.drawText(header, {
-				x: currentX + columnWidth - textWidth + 10, // Ajuste para alinearlo al borde derecho
-				y: currentY - rowGap,
-				size: tableFontSize,
-				font: boldFont,
-				color: rgb(1, 1, 1)
-			});
-		} else {
-			// Texto alineado a la izquierda
-			page.drawText(header, {
-				x: cellX,
-				y: currentY - rowGap,
-				size: tableFontSize,
-				font: boldFont,
-				color: rgb(1, 1, 1)
-			});
-		}
-		currentX += columnWidths[index];
-	});
-	currentY -= rowHeight; // Espacio para las filas
-
-	//#region ventanas
-	// Dibujar filas de datos desde las opciones
-	opcion.Ventanas.forEach((ventana) => {
-		currentX = marginLeft;
-
-		// Dibujar bordes de las filas
-		// page.drawRectangle({
-		// 	x: marginLeft,
-		// 	y: currentY - rowHeight,
-		// 	width: width - marginLeft * 2,
-		// 	height: rowHeight,
-		// 	color: rgb(1, 1, 1),
-		// 	opacity: ventana_idx % 2 == 0 ? 0 : 0.07
-		// });
-
-		// Material
-		// const materialEncontrado = materiales.find((mat) => mat.id_material === ventana.id_material);
-		// const material = materialEncontrado
-		// 	? materialEncontrado.nombre_material
-		// 	: 'Material no encontrado';
-		const tipoEncontrado = tipos.find((t) => t.id_tipo === ventana.id_tipo);
-		const tipo = tipoEncontrado ? tipoEncontrado.descripcion_tipo : 'Tipo no encontrado';
-		const cristalEncontrado = cristales.find((c) => c.id_cristal === ventana.id_cristal);
-		const cristal = cristalEncontrado ? cristalEncontrado.desc_cristal : 'Cristal no encontrado';
-		const colorEncontrado = colores.find((c) => c.id_color === ventana.id_color);
-		const color = colorEncontrado ? colorEncontrado.nombre_color : 'Color no encontrado';
-
-		const row = [
-			tipo,
-			color,
-			cristal,
-			ventana.ancho.toString(),
-			ventana.alto.toString(),
-			ventana.cantidad.toString(),
-			formatoChileno(ventana.precio_unitario),
-			formatoChileno(ventana.precio_total)
-		];
-
-		row.forEach((cell, index) => {
-			const cellX = currentX + 5;
-			const columnWidth = columnWidths[index];
-
-			// Alinear texto a la derecha para "PRECIO U" y "TOTAL"
-			if (index > headersTabla.length - 6) {
-				const textWidth = font.widthOfTextAtSize(cell, tableFontSize);
-				page.drawText(cell, {
-					x: currentX + columnWidth - textWidth + 10, // Ajuste para alinearlo al borde derecho
-					y: currentY - rowGap,
-					size: tableFontSize,
-					font: font,
-					color: rgb(0, 0, 0)
-				});
+		let line = '';
+		for (const word of paragraph.split(/\s+/)) {
+			const candidate = line ? `${line} ${word}` : word;
+			if (line && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+				lines.push(line);
+				line = word;
 			} else {
-				// Texto alineado a la izquierda
-				let add_dot = false;
-				while (font.widthOfTextAtSize(cell, tableFontSize) > columnWidth) {
-					cell = cell.slice(0, cell.length - 1);
-					add_dot = true;
-				}
-				if (add_dot) cell = cell.concat('.');
-				page.drawText(cell, {
-					x: cellX,
-					y: currentY - rowGap,
-					size: tableFontSize,
-					font: font,
-					color: rgb(0, 0, 0)
-				});
+				line = candidate;
 			}
+		}
+		if (line) lines.push(line);
+	}
 
-			currentX += columnWidth;
-		});
-
-		currentY -= rowHeight; // Espacio entre filas
-	});
-
-	//#region footer
-	const totalIvaIncluido = opcion.Ventanas.reduce((sum, ventana) => sum + ventana.precio_total, 0);
-	footerValues = [
-		valor_despacho,
-		valor_instalacion,
-		totalIvaIncluido + valor_despacho + valor_instalacion
-	];
-
-	const extraWidth = font.widthOfTextAtSize('000000000000000', tableFontSize);
-	const footerCellWidth = extraWidth * 2.5;
-
-	// dibujar bordes todo menos valor total
-	page.drawRectangle({
-		width: footerCellWidth,
-		height: (footerText.length - 1) * rowHeight,
-		x: width - marginLeft - footerCellWidth,
-		y: currentY - (footerText.length - 1) * rowHeight,
-		borderColor: rgb(1, 0, 0),
-		borderWidth: 0.25
-	});
-
-	// dibujar bordes valor total
-	page.drawRectangle({
-		width: footerCellWidth,
-		height: rowHeight,
-		x: width - marginLeft - footerCellWidth,
-		y: currentY - footerText.length * rowHeight,
-		borderColor: rgb(1, 0, 0),
-		borderWidth: 1
-	});
-
-	footerText.forEach((text, index) => {
-		page.drawText(text, {
-			x: width - marginLeft - footerCellWidth + 5,
-			y: currentY - rowGap,
-			size: tableFontSize,
-			font: font,
-			color: rgb(0, 0, 0)
-		});
-
-		const value = footerValues[index].toLocaleString('en-US').split('.')[0];
-		const valueWidth = font.widthOfTextAtSize(value, tableFontSize);
-
-		page.drawText(value, {
-			x: currentX - valueWidth + 10, // Ajuste para alinearlo al borde derecho
-			y: currentY - rowGap,
-			size: tableFontSize,
-			font: font,
-			color: rgb(0, 0, 0)
-		});
-		currentY -= rowHeight;
-	});
-
-	currentY -= verticalGap;
+	return lines.length ? lines : [''];
 }
 
-//#region generatePDF
-// Función para generar el PDF iterando sobre los elementos.
+function fitText(text: string, font: PDFFont, size: number, maxWidth: number) {
+	if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+	let shortened = text;
+	while (shortened.length && font.widthOfTextAtSize(`${shortened}...`, size) > maxWidth) {
+		shortened = shortened.slice(0, -1);
+	}
+	return `${shortened}...`;
+}
+
+function drawRightText(
+	page: PDFPage,
+	text: string,
+	x: number,
+	y: number,
+	maxWidth: number,
+	font: PDFFont,
+	size: number,
+	color: RGB
+) {
+	const fitted = fitText(text, font, size, maxWidth);
+	page.drawText(fitted, {
+		x: x + maxWidth - font.widthOfTextAtSize(fitted, size),
+		y,
+		font,
+		size,
+		color
+	});
+}
+
+function formatCurrency(value: number) {
+	return new Intl.NumberFormat('es-CL', {
+		style: 'currency',
+		currency: 'CLP',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0
+	})
+		.format(Math.trunc(value))
+		.replace(/\u00a0/g, ' ');
+}
+
+function formatDate(value: string) {
+	const date = new Date(value);
+	if (Number.isNaN(date.getTime())) return '';
+	return new Intl.DateTimeFormat('es-CL', {
+		day: '2-digit',
+		month: 'long',
+		year: 'numeric'
+	}).format(date);
+}
+
+function getTypeLabel(window: VentanaModel, constants: ConstantData) {
+	return constants.tipos.find((type) => type.id_tipo === window.id_tipo)?.descripcion_tipo ?? '';
+}
+
+function getColorLabel(window: VentanaModel, constants: ConstantData) {
+	return constants.colores.find((color) => color.id_color === window.id_color)?.nombre_color ?? '';
+}
+
+function getGlassLabel(window: VentanaModel, constants: ConstantData) {
+	return (
+		constants.cristales.find((glass) => glass.id_cristal === window.id_cristal)?.desc_cristal ?? ''
+	);
+}
+
+function optionMaterial(option: OpcionModel, constants: ConstantData) {
+	const firstWindow = option.Ventanas[0];
+	if (!firstWindow) return undefined;
+	return constants.materiales.find((material) => material.id_material === firstWindow.id_material);
+}
+
+function drawWrappedText(
+	page: PDFPage,
+	text: string,
+	x: number,
+	top: number,
+	maxWidth: number,
+	font: PDFFont,
+	size: number,
+	color: RGB,
+	lineHeight = LINE_HEIGHT
+) {
+	const lines = wrapText(text, font, size, maxWidth);
+	lines.forEach((line, index) => {
+		if (!line) return;
+		page.drawText(line, { x, y: top - size - index * lineHeight, font, size, color });
+	});
+	return Math.max(lines.length, 1) * lineHeight;
+}
+
+function drawPageFooter(
+	page: PDFPage,
+	pageIndex: number,
+	pageCount: number,
+	width: number,
+	regularFont: PDFFont,
+	quoteId: number | undefined
+) {
+	page.drawLine({
+		start: { x: PAGE_MARGIN, y: 30 },
+		end: { x: width - PAGE_MARGIN, y: 30 },
+		thickness: 0.6,
+		color: palette.line
+	});
+	page.drawText(`Termoacústicos | Presupuesto ${quoteId ?? ''}`.trim(), {
+		x: PAGE_MARGIN,
+		y: 17,
+		font: regularFont,
+		size: 7,
+		color: palette.muted
+	});
+	drawRightText(
+		page,
+		`${pageIndex + 1} / ${pageCount}`,
+		PAGE_MARGIN,
+		17,
+		width - PAGE_MARGIN * 2,
+		regularFont,
+		7,
+		palette.muted
+	);
+}
+
 export const generatePDF = async (
 	presupuesto: PresupuestoModel,
 	imagenes: ImageGroup[],
 	constantes: ConstantData
 ) => {
-	colores = constantes.colores;
-	cristales = constantes.cristales;
-	materiales = constantes.materiales;
-	tipos = constantes.tipos;
-	pdfDoc = await PDFDocument.create();
-
+	const pdfDoc = await PDFDocument.create();
+	pdfDoc.setTitle(`Cotización ${presupuesto.id_presupuesto ?? ''}`.trim());
+	pdfDoc.setSubject('Presupuesto de ventanas');
+	pdfDoc.setCreator('Termoacústicos');
 	pdfDoc.registerFontkit(fontkit);
-	const fontBytes = await fetch('/Archivo-Regular.ttf').then((res) => res.arrayBuffer());
-	font = await pdfDoc.embedFont(fontBytes, { subset: true });
+	const regularBytes = await fetch('/Archivo-Regular.ttf').then((response) =>
+		response.arrayBuffer()
+	);
+	const regularFont = await pdfDoc.embedFont(regularBytes, { subset: true });
+	const boldBytes = await fetch('/Archivo-Bold.ttf').then((response) => response.arrayBuffer());
+	const boldFont = await pdfDoc.embedFont(boldBytes, { subset: true });
 
-	const boldFontBytes = await fetch('/Archivo-Bold.ttf').then((res) => res.arrayBuffer());
-	boldFont = await pdfDoc.embedFont(boldFontBytes, { subset: true });
+	const [width, height] = PageSizes.A4;
+	const contentWidth = width - PAGE_MARGIN * 2;
+	let page = pdfDoc.addPage(PageSizes.A4);
+	let currentY = height - PAGE_MARGIN;
 
-	page = pdfDoc.addPage(PageSizes.A4);
-	width = page.getWidth();
-	height = page.getHeight();
+	const addPage = () => {
+		page = pdfDoc.addPage(PageSizes.A4);
+		page.drawRectangle({
+			x: 0,
+			y: height - 5,
+			width,
+			height: 5,
+			color: palette.petrol
+		});
+		currentY = height - PAGE_MARGIN;
+	};
 
-	currentY = height - marginTop;
-	currentX = marginLeft;
+	const ensureSpace = (needed: number) => {
+		if (currentY - needed < BOTTOM_MARGIN) addPage();
+	};
 
-	//#region header
-	const imagenesHeader = imagenes.find((value) => value.img_group == 1);
-	await drawImageRow(imagenesHeader);
-	//#region textos
-	let textoIzq = constantes.constantes_pdf.texto_izquierda;
-	textoIzq = textoIzq.replace('{nombre}', presupuesto.nombre_cliente);
-	textoIzq = textoIzq.replace('{numero}', (presupuesto.id_presupuesto ?? 0).toString());
-
-	let textoDer = constantes.constantes_pdf.texto_derecha;
-	textoDer = textoDer.replace('{nombre}', presupuesto.nombre_cliente);
-	textoDer = textoDer.replace('{numero}', (presupuesto.id_presupuesto ?? 0).toString());
-
-	// // Dibujar textos
-	drawMultiLineText(textoDer, {
-		alignment: TextAlignment.Right,
-		bounds: {
-			height,
-			width: (width - marginLeft) / 2,
-			x: width / 2 - marginLeft - constantes.constantes_pdf.margen_texto_derecha,
-			y: currentY
-		},
-		font: boldFont,
-		fontSize: fontSize
+	page.drawRectangle({
+		x: 0,
+		y: height - 7,
+		width,
+		height: 7,
+		color: palette.petrol
+	});
+	page.drawRectangle({
+		x: PAGE_MARGIN,
+		y: height - 7,
+		width: 46,
+		height: 7,
+		color: palette.amber
 	});
 
-	currentY = drawMultiLineText(textoIzq, {
-		alignment: TextAlignment.Left,
-		bounds: {
-			height,
-			width: (width - marginLeft) / 2,
-			x: marginLeft + constantes.constantes_pdf.margen_texto_izquierda,
-			y: currentY
-		},
+	page.drawText('COTIZACIÓN DE VENTANAS', {
+		x: PAGE_MARGIN,
+		y: currentY - 25,
 		font: boldFont,
-		fontSize: fontSize
+		size: 19,
+		color: palette.petrol
 	});
+	drawRightText(
+		page,
+		`N.° ${String(presupuesto.id_presupuesto ?? 0).padStart(5, '0')}`,
+		PAGE_MARGIN,
+		currentY - 15,
+		contentWidth,
+		boldFont,
+		10,
+		palette.ink
+	);
+	drawRightText(
+		page,
+		formatDate(presupuesto.fecha),
+		PAGE_MARGIN,
+		currentY - 29,
+		contentWidth,
+		regularFont,
+		8,
+		palette.muted
+	);
+	currentY -= 43;
 
-	//#region imagenes1
-	const imagenesGroup2 = imagenes.find((value) => value.img_group == 2);
-	await drawImageRow(imagenesGroup2);
+	const cardGap = 10;
+	const cardWidth = (contentWidth - cardGap) / 2;
+	const companyLines = [
+		cleanText(constantes.constantes_pdf.texto_izquierda),
+		cleanText(constantes.constantes_pdf.texto_derecha)
+	];
+	const companyLayouts = companyLines.map((text) => wrapText(text, regularFont, 8, cardWidth - 24));
+	const companyCardHeight = Math.max(60, ...companyLayouts.map((lines) => lines.length * 10 + 25));
+	ensureSpace(companyCardHeight + 20);
 
-	let textoCliente = constantes.constantes_pdf.texto_cliente;
-	textoCliente = textoCliente.replace('{nombre}', presupuesto.nombre_cliente);
-	textoCliente = textoCliente.replace('{numero}', (presupuesto.id_presupuesto ?? 0).toString());
-
-	currentY = drawMultiLineText(textoCliente, {
-		alignment: TextAlignment.Left,
-		bounds: { width: width - marginLeft * 2, height, x: currentX, y: currentY },
-		font: boldFont,
-		fontSize: fontSize
-	});
-	currentY -= verticalGap;
-
-	//#region opciones
-	for (let opcionIndex = 0; opcionIndex < presupuesto.Opciones.length; opcionIndex++) {
-		const opcion = presupuesto.Opciones[opcionIndex];
-
-		const optColSize = boldFont.heightAtSize(fontSize);
-
-		let opcionHeight = opcion.Ventanas.length * rowHeight;
-		opcionHeight += (footerText.length + 1) * rowHeight;
-		opcionHeight += optColSize * 2;
-
-		if (currentY - opcionHeight < 0) {
-			page = pdfDoc.addPage(PageSizes.A4);
-			currentY = height - marginTop;
-		}
-
-		const currentMat = materiales.find(
-			(elem) => elem.id_material == opcion.Ventanas[0].id_material
+	companyLines.forEach((text, index) => {
+		const x = PAGE_MARGIN + index * (cardWidth + cardGap);
+		page.drawRectangle({
+			x,
+			y: currentY - companyCardHeight,
+			width: cardWidth,
+			height: companyCardHeight,
+			color: palette.row,
+			borderColor: palette.line,
+			borderWidth: 0.5
+		});
+		page.drawText(index === 0 ? 'EMISOR' : 'CONTACTO COMERCIAL', {
+			x: x + 12,
+			y: currentY - 14,
+			font: boldFont,
+			size: 7,
+			color: palette.petrol
+		});
+		drawWrappedText(
+			page,
+			text,
+			x + 12,
+			currentY - 20,
+			cardWidth - 24,
+			regularFont,
+			8,
+			palette.ink,
+			10
 		);
+	});
+	currentY -= companyCardHeight + 14;
 
-		currentX = marginLeft;
+	const clientMessage = cleanText(constantes.constantes_pdf.texto_cliente)
+		.replaceAll('{nombre}', presupuesto.nombre_cliente)
+		.replaceAll('{numero}', String(presupuesto.id_presupuesto ?? 0));
+	const clientDetails = [
+		presupuesto.Cliente?.rut_cliente ? `RUT ${presupuesto.Cliente.rut_cliente}` : '',
+		presupuesto.Cliente?.telefono ?? '',
+		presupuesto.Cliente?.email ?? '',
+		presupuesto.Cliente?.direccion ?? ''
+	].filter(Boolean);
+	const messageLines = wrapText(clientMessage, regularFont, 8, contentWidth - 24);
+	const detailsRows = Math.ceil(clientDetails.length / 2);
+	const clientCardHeight = Math.max(76, 43 + messageLines.length * 10 + detailsRows * 12);
+	ensureSpace(clientCardHeight + 20);
 
-		// const optionMargin = boldFont.widthOfTextAtSize('OPCIÓN X  ', fontSize);
-		// page.drawText('OPCIÓN ', {
-		// 	x: marginLeft,
-		// 	y: currentY,
-		// 	size: fontSize,
-		// 	font: boldFont
-		// });
+	page.drawRectangle({
+		x: PAGE_MARGIN,
+		y: currentY - clientCardHeight,
+		width: contentWidth,
+		height: clientCardHeight,
+		color: palette.petrolLight
+	});
+	page.drawRectangle({
+		x: PAGE_MARGIN,
+		y: currentY - clientCardHeight,
+		width: 3,
+		height: clientCardHeight,
+		color: palette.amber
+	});
+	page.drawText('PREPARADO PARA', {
+		x: PAGE_MARGIN + 14,
+		y: currentY - 15,
+		font: boldFont,
+		size: 7,
+		color: palette.petrol
+	});
+	page.drawText(fitText(presupuesto.nombre_cliente || 'Cliente', boldFont, 12, contentWidth - 28), {
+		x: PAGE_MARGIN + 14,
+		y: currentY - 31,
+		font: boldFont,
+		size: 12,
+		color: palette.ink
+	});
+	let clientY = currentY - 38;
+	if (clientMessage && cleanText(clientMessage) !== presupuesto.nombre_cliente) {
+		const messageHeight = drawWrappedText(
+			page,
+			clientMessage,
+			PAGE_MARGIN + 14,
+			clientY,
+			contentWidth - 28,
+			regularFont,
+			8,
+			palette.muted,
+			10
+		);
+		clientY -= messageHeight;
+	}
+	clientDetails.forEach((detail, index) => {
+		const col = index % 2;
+		const row = Math.floor(index / 2);
+		page.drawText(fitText(detail, regularFont, 7, (contentWidth - 32) / 2), {
+			x: PAGE_MARGIN + 14 + col * (contentWidth / 2),
+			y: clientY - 10 - row * 11,
+			font: regularFont,
+			size: 7,
+			color: palette.ink
+		});
+	});
+	currentY -= clientCardHeight + 20;
 
-		// currentX += optionMargin;
-
-		const materialText = currentMat?.texto_libre ?? 'Material no encontrado';
-		// const materialSize = boldFont.widthOfTextAtSize(materialText + 'AA', fontSize);
-
-		// page.drawText(materialText, { x: currentX, y: currentY, size: fontSize, font: boldFont });
-		// currentX += boldFont.widthOfTextAtSize(materialText, fontSize) + marginLeft;
-
-		const upperRow = ['OPCIÓN ' + (opcionIndex + 1) + '    ' + materialText];
-		// agregar a escribir solo si hay texto
-		if (currentMat && currentMat.texto_calidad) upperRow.push(currentMat.texto_calidad);
-		if (currentMat && currentMat.texto_termopanel) upperRow.push(currentMat.texto_termopanel);
-
-		drawOptionHeaderRow(upperRow, width - currentX - marginLeft * 2, fontSize);
-		currentY -= optColSize;
-
-		currentY += verticalGap / 2;
-
-		drawTable(opcion, presupuesto.valor_despacho, presupuesto.valor_instalacion);
-		currentY -= verticalGap;
+	async function drawImageGroup(group: ImageGroup | undefined) {
+		if (!group?.imagenes.length) return;
+		const imageHeight = Math.min(Math.max(group.height || 38, 26), 54);
+		ensureSpace(imageHeight + 12);
+		const gap = 10;
+		const imageWidth = (contentWidth - gap * (group.imagenes.length - 1)) / group.imagenes.length;
+		for (const [index, image] of group.imagenes.entries()) {
+			const raw = image.bytes as unknown as string;
+			const base64 = raw.includes(',') ? raw.slice(raw.indexOf(',') + 1) : raw;
+			const imageBytes = Uint8Array.from(atob(base64), (character) => character.charCodeAt(0));
+			const embeddedImage = await pdfDoc.embedPng(imageBytes);
+			const scaled = embeddedImage.scaleToFit(imageWidth, imageHeight);
+			page.drawImage(embeddedImage, {
+				x: PAGE_MARGIN + index * (imageWidth + gap) + (imageWidth - scaled.width) / 2,
+				y: currentY - imageHeight + (imageHeight - scaled.height) / 2,
+				width: scaled.width,
+				height: scaled.height
+			});
+		}
+		currentY -= imageHeight + 12;
 	}
 
-	const imagenesGroup3 = imagenes.find((value) => value.img_group == 3);
-	await drawImageRow(imagenesGroup3);
+	await drawImageGroup(imagenes.find((group) => group.img_group === 1));
+	await drawImageGroup(imagenes.find((group) => group.img_group === 2));
 
-	drawMultiLineText(presupuesto.texto_libre, {
-		alignment: TextAlignment.Left,
-		bounds: { width: width - marginLeft * 2, height: 10000, x: 10, y: 10 },
-		font: font,
-		fontSize: fontSize
-	});
-	//#region guardarPDF
-	const pdfBytes = await pdfDoc.save();
-	const blob = new Blob([pdfBytes.slice().buffer as ArrayBuffer], { type: 'application/pdf' });
-	const url = URL.createObjectURL(blob);
-	return url;
+	function drawTableHeader() {
+		const tableTop = currentY;
+		const rowHeight = 22;
+		page.drawRectangle({
+			x: PAGE_MARGIN,
+			y: tableTop - rowHeight,
+			width: contentWidth,
+			height: rowHeight,
+			color: palette.petrol
+		});
+		let x = PAGE_MARGIN + 8;
+		for (const column of columns) {
+			if (column.align === 'right') {
+				drawRightText(
+					page,
+					column.label,
+					x,
+					tableTop - 14,
+					column.width - 8,
+					boldFont,
+					6.4,
+					palette.white
+				);
+			} else {
+				page.drawText(column.label, {
+					x,
+					y: tableTop - 14,
+					font: boldFont,
+					size: 6.4,
+					color: palette.white
+				});
+			}
+			x += column.width;
+		}
+		currentY -= rowHeight;
+	}
+
+	function drawWindowRow(window: VentanaModel, constants: ConstantData, rowIndex: number) {
+		const values = [
+			getTypeLabel(window, constants),
+			getColorLabel(window, constants),
+			getGlassLabel(window, constants),
+			window.ancho.toLocaleString('es-CL'),
+			window.alto.toLocaleString('es-CL'),
+			String(window.cantidad),
+			formatCurrency(window.precio_unitario),
+			formatCurrency(window.precio_total)
+		];
+		const lineCounts = values.map((value, index) =>
+			index < 3 ? wrapText(value, regularFont, 7.3, columns[index].width - 8).length : 1
+		);
+		const rowHeight = Math.max(25, Math.max(...lineCounts) * 9 + 10);
+		if (rowIndex % 2 === 0) {
+			page.drawRectangle({
+				x: PAGE_MARGIN,
+				y: currentY - rowHeight,
+				width: contentWidth,
+				height: rowHeight,
+				color: palette.row
+			});
+		}
+		page.drawLine({
+			start: { x: PAGE_MARGIN, y: currentY - rowHeight },
+			end: { x: width - PAGE_MARGIN, y: currentY - rowHeight },
+			thickness: 0.45,
+			color: palette.line
+		});
+
+		let x = PAGE_MARGIN + 8;
+		values.forEach((value, index) => {
+			const column = columns[index];
+			if (index < 3) {
+				const lines = wrapText(value, regularFont, 7.3, column.width - 8);
+				lines.forEach((line, lineIndex) => {
+					page.drawText(line, {
+						x,
+						y: currentY - 11 - lineIndex * 9,
+						font: regularFont,
+						size: 7.3,
+						color: palette.ink
+					});
+				});
+			} else {
+				drawRightText(page, value, x, currentY - 15, column.width - 8, regularFont, 7, palette.ink);
+			}
+			x += column.width;
+		});
+		currentY -= rowHeight;
+	}
+
+	for (const [optionIndex, option] of presupuesto.Opciones.entries()) {
+		const material = optionMaterial(option, constantes);
+		const headingHeight = 31;
+		ensureSpace(headingHeight + 22 + 25 + 66);
+		page.drawRectangle({
+			x: PAGE_MARGIN,
+			y: currentY - headingHeight,
+			width: contentWidth,
+			height: headingHeight,
+			color: palette.petrolLight
+		});
+		page.drawRectangle({
+			x: PAGE_MARGIN,
+			y: currentY - headingHeight,
+			width: 3,
+			height: headingHeight,
+			color: palette.amber
+		});
+		page.drawText(`OPCIÓN ${optionIndex + 1}`, {
+			x: PAGE_MARGIN + 12,
+			y: currentY - 12,
+			font: boldFont,
+			size: 7,
+			color: palette.petrol
+		});
+		page.drawText(fitText(material?.texto_libre ?? 'Ventanas', boldFont, 9, contentWidth - 24), {
+			x: PAGE_MARGIN + 12,
+			y: currentY - 25,
+			font: boldFont,
+			size: 9,
+			color: palette.ink
+		});
+		const qualifiers = [material?.texto_calidad, material?.texto_termopanel]
+			.filter(Boolean)
+			.join('  |  ');
+		if (qualifiers) {
+			drawRightText(
+				page,
+				fitText(qualifiers, regularFont, 7, contentWidth - 180),
+				PAGE_MARGIN + 180,
+				currentY - 24,
+				contentWidth - 192,
+				regularFont,
+				7,
+				palette.muted
+			);
+		}
+		currentY -= headingHeight + 5;
+		drawTableHeader();
+
+		for (const [windowIndex, window] of option.Ventanas.entries()) {
+			const rowHeight = Math.max(
+				25,
+				Math.max(
+					...[
+						getTypeLabel(window, constantes),
+						getColorLabel(window, constantes),
+						getGlassLabel(window, constantes)
+					].map(
+						(value, index) => wrapText(value, regularFont, 7.3, columns[index].width - 8).length
+					)
+				) *
+					9 +
+					10
+			);
+			if (currentY - rowHeight < BOTTOM_MARGIN + 70) {
+				addPage();
+				page.drawText(`OPCIÓN ${optionIndex + 1} (continuación)`, {
+					x: PAGE_MARGIN,
+					y: currentY - 12,
+					font: boldFont,
+					size: 8,
+					color: palette.petrol
+				});
+				currentY -= 18;
+				drawTableHeader();
+			}
+			drawWindowRow(window, constantes, windowIndex);
+		}
+
+		ensureSpace(64);
+		const subtotal = option.Ventanas.reduce((total, window) => total + window.precio_total, 0);
+		const totals = [
+			['Transporte', presupuesto.valor_despacho],
+			['Instalación', presupuesto.valor_instalacion],
+			['Total IVA incluido', subtotal + presupuesto.valor_despacho + presupuesto.valor_instalacion]
+		] as const;
+		const totalBoxWidth = 220;
+		const totalRowHeight = 18;
+		const totalBoxX = width - PAGE_MARGIN - totalBoxWidth;
+		page.drawRectangle({
+			x: totalBoxX,
+			y: currentY - totalRowHeight * totals.length,
+			width: totalBoxWidth,
+			height: totalRowHeight * totals.length,
+			color: palette.row,
+			borderColor: palette.line,
+			borderWidth: 0.6
+		});
+		totals.forEach(([label, value], index) => {
+			const y = currentY - 12 - index * totalRowHeight;
+			if (index === 2) {
+				page.drawRectangle({
+					x: totalBoxX,
+					y: currentY - totalRowHeight * totals.length,
+					width: totalBoxWidth,
+					height: totalRowHeight,
+					color: palette.petrolLight
+				});
+			}
+			page.drawText(label.toUpperCase(), {
+				x: totalBoxX + 10,
+				y,
+				font: index === 2 ? boldFont : regularFont,
+				size: index === 2 ? 7.2 : 7,
+				color: index === 2 ? palette.petrol : palette.muted
+			});
+			drawRightText(
+				page,
+				formatCurrency(value),
+				totalBoxX + 10,
+				y,
+				totalBoxWidth - 20,
+				index === 2 ? boldFont : regularFont,
+				index === 2 ? 8 : 7,
+				index === 2 ? palette.petrol : palette.ink
+			);
+		});
+		currentY -= totalRowHeight * totals.length + 16;
+	}
+
+	await drawImageGroup(imagenes.find((group) => group.img_group === 3));
+	const notes = cleanText(presupuesto.texto_libre);
+	if (notes) {
+		const noteLines = wrapText(notes, regularFont, 8, contentWidth - 24);
+		const noteHeight = 28 + noteLines.length * 11;
+		ensureSpace(noteHeight);
+		page.drawRectangle({
+			x: PAGE_MARGIN,
+			y: currentY - noteHeight,
+			width: contentWidth,
+			height: noteHeight,
+			color: palette.row,
+			borderColor: palette.line,
+			borderWidth: 0.5
+		});
+		page.drawText('NOTAS', {
+			x: PAGE_MARGIN + 12,
+			y: currentY - 14,
+			font: boldFont,
+			size: 7,
+			color: palette.petrol
+		});
+		drawWrappedText(
+			page,
+			notes,
+			PAGE_MARGIN + 12,
+			currentY - 19,
+			contentWidth - 24,
+			regularFont,
+			8,
+			palette.ink,
+			11
+		);
+	}
+
+	const pages = pdfDoc.getPages();
+	pages.forEach((pdfPage, index) =>
+		drawPageFooter(pdfPage, index, pages.length, width, regularFont, presupuesto.id_presupuesto)
+	);
+
+	const bytes = await pdfDoc.save();
+	return URL.createObjectURL(
+		new Blob([bytes.slice().buffer as ArrayBuffer], { type: 'application/pdf' })
+	);
 };

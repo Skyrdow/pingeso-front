@@ -21,7 +21,7 @@ Este es el archivo de configuración para cloudflare, todos los valores se sacan
 #### Instalar dependencias
 
 ```bash
-npm i
+npm ci
 ```
 
 #### Prisma
@@ -33,7 +33,7 @@ Aplicar el script de migración que crea las tablas en la db, en --remote o --lo
 ```bash
 npx prisma generate
 npx prisma migrate diff --from-empty --to-schema-datamodel ./prisma/schema.prisma --script --output migrations/0001_create_tables.sql
-npx wrangler d1 migrations apply termoacusticos-db --local
+npx wrangler d1 migrations apply pingeso-demo --local
 ```
 
 Más info en los [docs](https://www.prisma.io/docs/orm/prisma-client/deployment/edge/deploy-to-cloudflare#cloudflare-d1)
@@ -76,7 +76,7 @@ Se usa el [plugin de tailwind](https://iconify.design/docs/usage/css/tailwind/ic
 <span class="iconify mdi--account-alert-outline"></span>
 ```
 
-Para agregar un paquete de iconos nuevo se debe instalar (ej. `npm i -D @iconify-json/mdi-light`) e importar a la configuración de tailwind ([tailwind.config.js](./tailwind.config.js)), agregandolo a la lista en `addIconSelectors(['mdi', 'mdi-light'])`.
+Para agregar un paquete de iconos nuevo se debe instalar (ej. `npm install -D @iconify-json/mdi-light`) e importar a la configuración de tailwind ([tailwind.config.js](./tailwind.config.js)), agregandolo a la lista en `addIconSelectors(['mdi', 'mdi-light'])`.
 
 ## Migración fuera de cloudflare
 
