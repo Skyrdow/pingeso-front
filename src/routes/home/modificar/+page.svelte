@@ -32,8 +32,10 @@
 		'rounded-lg bg-teal-800 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2';
 
 	let constantSelected = $state('Materiales');
-
 	let successModal = $state(false);
+
+	let imageError = $state('');
+	let uploadingGroup = $state<number | null>(null);
 	let errorMessage = $state('');
 	let editMaterialModal = $state(false);
 	let editTipoModal = $state(false);
@@ -491,93 +493,70 @@
 			});
 	}
 
-	const handleImageUpload = async (event: Event) => {
-		const files = (event.target as HTMLInputElement)?.files;
-		if (!files) return;
+	async function handleImageUpload(event: Event, img_group: number) {
+		const input = event.target as HTMLInputElement;
+		const file = input.files?.[0];
 
-		for (const file of Array.from(files)) {
-			if (!file.type.startsWith('image/')) continue; // Filtra solo imágenes
-
-			const reader = new FileReader();
-
-			reader.onload = async (e) => {
-				if (!e.target?.result) return;
-
-				const img = new Image();
-				img.src = e.target.result.toString();
-				img.onload = () => {
-					const canvas = document.createElement('canvas');
-					const ctx = canvas.getContext('2d');
-
-					if (!ctx) return;
-
-					// Define el tamaño del canvas según la imagen
-					canvas.width = img.width;
-					canvas.height = img.height;
-
-					// Dibuja la imagen en el canvas
-					ctx.drawImage(img, 0, 0);
-
-					// Si es JPG, conviértelo a PNG y guarda los bytes
-					if (file.type === 'image/jpeg') {
-						canvas.toBlob((blob) => {
-							if (blob) {
-								const readerBlob = new FileReader();
-								readerBlob.onloadend = () => {
-									if (readerBlob.result) {
-										imagenNueva.bytes = readerBlob.result.toString(); // Guarda los bytes convertidos
-									}
-								};
-								readerBlob.readAsDataURL(blob); // Lee los bytes del PNG
-							}
-						}, 'image/png');
-					} else {
-						// Si ya es PNG o cualquier otro formato, guarda los bytes originales
-						imagenNueva.bytes = e.target?.result?.toString() ?? '';
-					}
-				};
-			};
-
-			reader.readAsDataURL(file);
-		}
-	};
-
-	async function handleImagePost(img_group: number, height: number) {
-		if (imagenNueva.bytes === '') {
-			alert('Error al subir la imagen');
+		if (!file || !file.type.startsWith('image/')) {
+			imageError = 'Selecciona un archivo de imagen válido.';
 			return;
 		}
 
-		imagenNueva.img_group = img_group;
-		// CAMBIAR POR INPUT
-		imagenNueva.height = height;
+		imageError = '';
+		uploadingGroup = img_group;
 
-		await fetch('/api/imagenes', {
+		try {
+			const bytes = await new Promise<string>((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => resolve(reader.result?.toString() ?? '');
+				reader.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+				reader.readAsDataURL(file);
+			});
+
+			if (!bytes) throw new Error('La imagen no contiene datos.');
+
+			imagenNueva = { ...imagenNueva, bytes, img_group, height: 80 };
+			await handleImagePost(img_group, 80);
+		} catch (error) {
+			console.error('Error durante la carga de la imagen:', error);
+			imageError = 'No se pudo cargar la imagen. Inténtalo nuevamente.';
+		} finally {
+			uploadingGroup = null;
+			input.value = '';
+		}
+	}
+
+	async function handleImagePost(img_group: number, height: number) {
+		if (imagenNueva.bytes === '') {
+			imageError = 'Selecciona una imagen antes de guardarla.';
+			return;
+		}
+
+		const response = await fetch('/api/imagenes', {
 			method: 'POST',
-			body: JSON.stringify(imagenNueva)
-		}).then((response) => {
-			return response.json();
+			body: JSON.stringify({ ...imagenNueva, img_group, height })
 		});
+
+		if (!response.ok) {
+			throw new Error(`Error al guardar la imagen: ${response.status}`);
+		}
+
 		imagenNueva.bytes = '';
-		imagenes = await fetch('/api/imagenes', {
-			method: 'GET'
-		}).then((response) => {
-			return response.json();
-		});
+		imagenes = await fetch('/api/imagenes', { method: 'GET' }).then((result) => result.json());
 	}
 
 	async function handleImageDelete(idx: number, imgIdx: number) {
-		await fetch('/api/imagenes', {
+		const response = await fetch('/api/imagenes', {
 			method: 'DELETE',
 			body: JSON.stringify({ id_imagen: imagenes[idx].imagenes[imgIdx].id_imagen })
-		}).then((response) => {
-			return response.json();
 		});
-		imagenes = await fetch('/api/imagenes', {
-			method: 'GET'
-		}).then((response) => {
-			return response.json();
-		});
+
+		if (!response.ok) {
+			imageError = 'No se pudo eliminar la imagen. Inténtalo nuevamente.';
+			return;
+		}
+
+		imagenes = await fetch('/api/imagenes', { method: 'GET' }).then((result) => result.json());
 	}
 
 	async function previewPDF() {
@@ -714,7 +693,7 @@
 	<!--editMaterial Modal-->
 	{#if editMaterialModal}
 		<div class={dialogBackdropClass}>
-			<section
+			<div
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="edit-material-title"
@@ -773,7 +752,7 @@
 						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
 					</footer>
 				</form>
-			</section>
+			</div>
 		</div>
 	{/if}
 
@@ -811,7 +790,7 @@
 	<!-- editCristal Modal -->
 	{#if editCristalModal}
 		<div class={dialogBackdropClass}>
-			<section
+			<div
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="edit-cristal-title"
@@ -856,7 +835,7 @@
 						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
 					</footer>
 				</form>
-			</section>
+			</div>
 		</div>
 	{/if}
 
@@ -958,7 +937,7 @@
 	<!-- editTipo Modal -->
 	{#if editTipoModal}
 		<div class={dialogBackdropClass}>
-			<section
+			<div
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="edit-tipo-title"
@@ -1031,7 +1010,7 @@
 						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
 					</footer>
 				</form>
-			</section>
+			</div>
 		</div>
 	{/if}
 
@@ -1098,7 +1077,7 @@
 	<!-- editColor Modal -->
 	{#if editColorModal}
 		<div class={dialogBackdropClass}>
-			<section
+			<div
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="edit-color-title"
@@ -1136,7 +1115,7 @@
 						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
 					</footer>
 				</form>
-			</section>
+			</div>
 		</div>
 	{/if}
 
@@ -1184,109 +1163,221 @@
 	{/if}
 
 	{#if constantSelected == 'Imágenes'}
-		<div class="space-y-8">
-			<button class="bg-white p-4 shadow-md" onclick={previewPDF}>Previsualizar PDF</button>
-			<div class="w-full flex flex-col">
-				<h2>
-					{'Palabras especiales: {nombre} - Nombre del cliente {numero} - Número de presupuesto'}
-				</h2>
-				<label>
-					Texto Izquierdo
-					<textarea
-						class="w-full resize-none"
-						bind:value={textoIzq}
-						oninput={() => adjustHeight(textareaIzq)}
-						onfocus={() => adjustHeight(textareaIzq)}
-						bind:this={textareaIzq}></textarea>
-				</label>
-				<label>
-					Margen Texto Izquierdo
-					<input type="number" bind:value={margenIzq} />
-				</label>
-				<label
-					>Texto Derecha
-					<textarea
-						class="w-full resize-none"
-						bind:value={textoDer}
-						oninput={() => adjustHeight(textareaDer)}
-						onfocus={() => adjustHeight(textareaDer)}
-						bind:this={textareaDer}></textarea>
-				</label>
-				<label
-					>Margen Texto Derecha
-					<input type="number" bind:value={margenDer} />
-				</label>
-				<label
-					>Texto Cliente
-					<textarea
-						class="w-full resize-none"
-						oninput={() => adjustHeight(textareaCliente)}
-						onfocus={() => adjustHeight(textareaCliente)}
-						bind:this={textareaCliente}
-						bind:value={textoCliente}></textarea>
-				</label>
+		<section class="space-y-6" aria-labelledby="imagenes-title">
+			<header
+				class="flex flex-col gap-4 rounded-2xl bg-teal-950 p-5 text-white shadow-sm sm:flex-row sm:items-end sm:justify-between sm:p-6">
+				<div>
+					<p class="text-xs font-bold uppercase tracking-[0.18em] text-amber-300">
+						Configuración del PDF
+					</p>
+					<h2 id="imagenes-title" class="mt-1 text-2xl font-bold tracking-tight">
+						Imágenes y encabezado
+					</h2>
+					<p class="mt-2 max-w-2xl text-sm leading-6 text-teal-100">
+						Edita los textos del documento y administra las imágenes que aparecen en sus cabeceras.
+					</p>
+				</div>
+				<button
+					type="button"
+					class="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-300 px-4 text-sm font-bold text-teal-950 transition hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-teal-950"
+					onclick={previewPDF}>
+					<span class="iconify mdi--file-eye-outline size-5" aria-hidden="true"></span>
+					Previsualizar PDF
+				</button>
+			</header>
 
-				<button onclick={handleTextoPDFSubmit}>Guardar cambios</button>
-			</div>
+			{#if imageError}
+				<div
+					role="alert"
+					class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+					<span class="iconify mdi--alert-circle-outline mt-0.5 size-5 shrink-0" aria-hidden="true"
+					></span>
+					<p class="flex-1">{imageError}</p>
+					<button
+						type="button"
+						class="rounded-md p-1 text-red-700 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
+						aria-label="Cerrar mensaje de error"
+						onclick={() => (imageError = '')}>
+						<span class="iconify mdi--close size-4" aria-hidden="true"></span>
+					</button>
+				</div>
+			{/if}
 
-			{#each imagenes as grupo, idx}
-				<div class="bg-white rounded-lg shadow-md p-6">
-					<div class="flex items-center justify-between mb-4">
-						<h2 class="text-xl font-semibold text-gray-800">Imágenes cabezal {idx + 1}</h2>
-					</div>
-
-					<!-- Grid de imágenes -->
-					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-						{#each grupo.imagenes as img, imgIdx}
-							<div class="relative group">
-								<div class="aspect-video w-full overflow-hidden rounded-lg bg-gray-100">
-									<img
-										src={img.bytes}
-										alt={`Imagen cabezal ${idx + 1}-${imgIdx}`}
-										class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-								</div>
-								<button
-									aria-label="eliminar imagen"
-									onclick={() => handleImageDelete(idx, imgIdx)}
-									class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-									<div class="iconify mdi--delete size-5"></div>
-								</button>
-							</div>
-						{/each}
-					</div>
-
-					<!-- Sección para agregar nueva imagen -->
-					<div class="border border-dashed border-gray-300 rounded-lg p-6 bg-gray-50">
-						<div class="flex flex-col items-center gap-4">
-							<div class="iconify mdi--cloud-upload text-gray-400 size-12"></div>
-							<h3 class="text-lg font-medium text-gray-700">Agregar imagen nueva</h3>
-							<p class="text-sm text-gray-500 text-center">
-								Arrastra y suelta una imagen aquí o haz clic para seleccionar
-							</p>
-							<input
-								type="file"
-								accept="image/*"
-								onchange={async (e) => {
-									await handleImageUpload(e);
-									setTimeout(async () => {
-										await handleImagePost(idx + 1, 80);
-									}, 1000);
-								}}
-								class="block w-full text-sm text-gray-500
-						file:mr-4 file:py-2 file:px-4
-						file:rounded-full file:border-0
-						file:text-sm file:font-semibold
-						file:bg-teal-50 file:text-teal-700
-						hover:file:bg-teal-100
-						cursor-pointer
-					" />
-						</div>
+			<section
+				class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"
+				aria-labelledby="textos-pdf-title">
+				<div class="mb-5 flex items-start gap-3 border-b border-slate-100 pb-4">
+					<span
+						class="grid size-10 shrink-0 place-items-center rounded-xl bg-teal-50 text-teal-800">
+						<span class="iconify mdi--text-box-edit-outline size-5" aria-hidden="true"></span>
+					</span>
+					<div>
+						<h3 id="textos-pdf-title" class="font-bold text-slate-950">Textos del documento</h3>
+						<p class="mt-1 text-sm text-slate-600">
+							Usa <code class="rounded bg-slate-100 px-1 py-0.5 text-xs text-teal-900"
+								>{'{nombre}'}</code> para insertar el nombre del cliente.
+						</p>
 					</div>
 				</div>
-			{/each}
-		</div>
-	{/if}
 
+				<div class="grid gap-5 lg:grid-cols-2">
+					<label class="block">
+						<span class={dialogLabelClass}>Texto izquierdo</span>
+						<textarea
+							rows="4"
+							class={`${dialogInputClass} min-h-28 resize-y`}
+							bind:value={textoIzq}
+							oninput={() => adjustHeight(textareaIzq)}
+							onfocus={() => adjustHeight(textareaIzq)}
+							bind:this={textareaIzq}></textarea>
+					</label>
+					<label class="block">
+						<span class={dialogLabelClass}>Texto derecho</span>
+						<textarea
+							rows="4"
+							class={`${dialogInputClass} min-h-28 resize-y`}
+							bind:value={textoDer}
+							oninput={() => adjustHeight(textareaDer)}
+							onfocus={() => adjustHeight(textareaDer)}
+							bind:this={textareaDer}></textarea>
+					</label>
+					<label class="block">
+						<span class={dialogLabelClass}>Texto para el cliente</span>
+						<textarea
+							rows="3"
+							class={`${dialogInputClass} min-h-24 resize-y`}
+							oninput={() => adjustHeight(textareaCliente)}
+							onfocus={() => adjustHeight(textareaCliente)}
+							bind:this={textareaCliente}
+							bind:value={textoCliente}></textarea>
+					</label>
+					<div class="grid gap-4 sm:grid-cols-2">
+						<label class="block">
+							<span class={dialogLabelClass}>Margen izquierdo</span>
+							<input class={dialogInputClass} type="number" min="0" bind:value={margenIzq} />
+						</label>
+						<label class="block">
+							<span class={dialogLabelClass}>Margen derecho</span>
+							<input class={dialogInputClass} type="number" min="0" bind:value={margenDer} />
+						</label>
+					</div>
+				</div>
+
+				<div class="mt-5 flex justify-end border-t border-slate-100 pt-4">
+					<button type="button" class={dialogSaveClass} onclick={handleTextoPDFSubmit}>
+						Guardar textos
+					</button>
+				</div>
+			</section>
+
+			<div class="space-y-4">
+				<div class="flex items-end justify-between gap-3">
+					<div>
+						<h3 class="text-lg font-bold text-slate-950">Cabeceras de imágenes</h3>
+						<p class="mt-1 text-sm text-slate-600">
+							Sube imágenes PNG o JPG. La última altura guardada se aplica al grupo completo.
+						</p>
+					</div>
+					<span
+						class="hidden rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 sm:inline-flex">
+						{imagenes.reduce((total, grupo) => total + grupo.imagenes.length, 0)} imágenes
+					</span>
+				</div>
+
+				<div class="grid gap-4 xl:grid-cols-3">
+					{#each imagenes as grupo, idx}
+						<article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+							<header class="flex items-start justify-between gap-3 border-b border-slate-100 p-4">
+								<div>
+									<p class="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
+										Grupo {idx + 1}
+									</p>
+									<h4 class="mt-1 font-bold text-slate-950">Cabecera {idx + 1}</h4>
+								</div>
+								<span
+									class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold tabular-nums text-slate-600">
+									{grupo.imagenes.length}
+									{grupo.imagenes.length === 1 ? 'imagen' : 'imágenes'}
+								</span>
+							</header>
+
+							<div class="space-y-4 p-4">
+								{#if grupo.imagenes.length}
+									<div class="grid gap-3">
+										{#each grupo.imagenes as img, imgIdx}
+											<figure
+												class="group relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+												<div class="aspect-[3/1] w-full">
+													<img
+														src={img.bytes}
+														alt={`Imagen de cabecera ${idx + 1}, posición ${imgIdx + 1}`}
+														class="size-full object-contain transition-transform duration-300 group-hover:scale-[1.02]" />
+												</div>
+												<figcaption
+													class="flex items-center justify-between gap-2 border-t border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+													<span>Imagen {imgIdx + 1}</span>
+													<button
+														type="button"
+														aria-label={`Eliminar imagen ${imgIdx + 1} del grupo ${idx + 1}`}
+														title="Eliminar imagen"
+														onclick={() => handleImageDelete(idx, imgIdx)}
+														class="inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold text-red-700 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700">
+														<span class="iconify mdi--delete-outline size-4" aria-hidden="true"
+														></span>
+														<span class="hidden sm:inline">Eliminar</span>
+													</button>
+												</figcaption>
+											</figure>
+										{/each}
+									</div>
+								{:else}
+									<div
+										class="grid min-h-32 place-items-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 text-center">
+										<div>
+											<span
+												class="iconify mdi--image-off-outline size-8 text-slate-400"
+												aria-hidden="true"></span>
+											<p class="mt-2 text-sm font-semibold text-slate-600">Sin imágenes todavía</p>
+											<p class="mt-1 text-xs text-slate-500">
+												Agrega la primera imagen de este grupo.
+											</p>
+										</div>
+									</div>
+								{/if}
+
+								<label
+									for={`image-upload-${idx}`}
+									class="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-teal-300 bg-teal-50/60 p-3 transition hover:border-teal-500 hover:bg-teal-50 focus-within:ring-2 focus-within:ring-teal-700 focus-within:ring-offset-2">
+									<span
+										class="grid size-10 shrink-0 place-items-center rounded-lg bg-white text-teal-800 shadow-sm">
+										<span
+											class={`iconify size-5 ${uploadingGroup === idx + 1 ? 'mdi--loading animate-spin' : 'mdi--upload-outline'}`}
+											aria-hidden="true"></span>
+									</span>
+									<span class="min-w-0 flex-1">
+										<span class="block text-sm font-bold text-teal-950">
+											{uploadingGroup === idx + 1 ? 'Subiendo imagen…' : 'Agregar imagen'}
+										</span>
+										<span class="mt-0.5 block text-xs text-teal-800"
+											>PNG o JPG · se guarda al seleccionar</span>
+									</span>
+									<span class="rounded-lg bg-teal-800 px-3 py-2 text-xs font-bold text-white"
+										>Seleccionar</span>
+									<input
+										id={`image-upload-${idx}`}
+										type="file"
+										accept="image/png,image/jpeg"
+										disabled={uploadingGroup !== null}
+										onchange={(event) => handleImageUpload(event, idx + 1)}
+										class="sr-only" />
+								</label>
+							</div>
+						</article>
+					{/each}
+				</div>
+			</div>
+		</section>
+	{/if}
 	<!--Tabla perfiles-->
 	{#if constantSelected == 'Perfiles'}
 		<table class="w-full table-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
@@ -1322,7 +1413,7 @@
 	<!-- editPerfil Modal -->
 	{#if editPerfilModal}
 		<div class={dialogBackdropClass}>
-			<section
+			<div
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="edit-perfil-title"
@@ -1372,7 +1463,7 @@
 						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
 					</footer>
 				</form>
-			</section>
+			</div>
 		</div>
 	{/if}
 
@@ -1405,7 +1496,7 @@
 	{/if}
 	{#if editQuincalleriaModal}
 		<div class={dialogBackdropClass}>
-			<section
+			<div
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="edit-quincalleria-title"
@@ -1461,7 +1552,7 @@
 						<button type="submit" class={dialogSaveClass}>Guardar cambios</button>
 					</footer>
 				</form>
-			</section>
+			</div>
 		</div>
 	{/if}
 </main>
